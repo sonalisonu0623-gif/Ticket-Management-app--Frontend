@@ -1,6 +1,7 @@
 [build]
+  base = "frontend"
   command = "npm run build -- --configuration production"
-  publish = "dist/ticket-management-frontend/browser"
+  publish = "frontend/dist/ticket-management-frontend/browser"
 
 [[redirects]]
   from = "/*"
