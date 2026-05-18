@@ -122,10 +122,10 @@ export class TicketListComponent implements OnInit {
 
   priorityClass(p?: string): string {
     if (!p) return '';
-    if (p.startsWith('P1')) return 'badge-critical';
-    if (p.startsWith('P2')) return 'badge-high';
-    if (p.startsWith('P3')) return 'badge-medium';
-    return 'badge-low';
+    if (p.startsWith('P1')) return 'badge-p1';
+    if (p.startsWith('P2')) return 'badge-p2';
+    if (p.startsWith('P3')) return 'badge-p3';
+    return 'badge-p4';
   }
 
   statusClass(s?: string): string {

@@ -1,33 +1,34 @@
-<div class="page-container">
+<div class="page-wrapper">
 
-  <app-spinner *ngIf="loading" label="Loading ticket..."></app-spinner>
+  <div *ngIf="loading" class="spinner-wrap"><div class="spinner"></div></div>
 
   <ng-container *ngIf="!loading && ticket">
 
-    <!-- Header -->
     <div class="page-header">
       <div class="detail-title-row">
         <span class="ticket-id-hero">{{ ticket.ticketNumber }}</span>
-        <span class="status-badge large" [ngClass]="statusClass(ticket.currentStatus)">{{ ticket.currentStatus }}</span>
-        <span class="badge large" [ngClass]="priorityClass(ticket.priority)" *ngIf="ticket.priority">{{ ticket.priority }}</span>
+        <span class="status-badge" [ngClass]="statusClass(ticket.currentStatus)">{{ ticket.currentStatus }}</span>
+        <span class="badge" [ngClass]="priorityClass(ticket.priority)" *ngIf="ticket.priority">{{ ticket.priority }}</span>
       </div>
       <div class="header-actions">
-        <a [routerLink]="['/tickets/edit', ticket.id]" class="btn-primary">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <a [routerLink]="['/tickets/edit', ticket.id]" class="btn btn-primary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           Edit Ticket
         </a>
-        <button class="btn-danger" (click)="deleteTicket()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+        <button class="btn btn-danger" (click)="deleteTicket()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
           Delete
         </button>
-        <a routerLink="/tickets" class="btn-secondary">← Back to List</a>
+        <a routerLink="/tickets" class="btn btn-secondary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Back
+        </a>
       </div>
     </div>
 
-    <!-- Body Grid -->
     <div class="detail-grid">
 
-      <!-- Issue Description -->
+      <!-- Issue -->
       <div class="detail-card span-full">
         <div class="card-label">Issue Description</div>
         <p class="issue-body">{{ ticket.issueDescription }}</p>
@@ -88,9 +89,7 @@
           </div>
           <div class="info-row">
             <span class="info-key">Resolution Time</span>
-            <span class="info-val" [class.resolution-time]="ticket.resolutionTime">
-              {{ ticket.resolutionTime || 'In progress' }}
-            </span>
+            <span class="info-val" [class.resolution-time]="ticket.resolutionTime">{{ ticket.resolutionTime || 'In progress' }}</span>
           </div>
           <div class="info-row">
             <span class="info-key">Created At</span>
@@ -103,7 +102,7 @@
         </div>
       </div>
 
-      <!-- Resolution Details -->
+      <!-- Resolution -->
       <div class="detail-card span-full" *ngIf="ticket.resolutionDetails">
         <div class="card-label">Resolution Details</div>
         <p class="body-text success-text">{{ ticket.resolutionDetails }}</p>
