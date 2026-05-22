@@ -51,3 +51,11 @@ export interface PageResponse<T> {
   size: number;
   number: number;
 }
+// Append explicitly to the base content inside models.ts
+export interface UserDTO {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+  createdAt: string;
+}

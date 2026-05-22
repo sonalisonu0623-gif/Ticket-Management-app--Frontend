@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ThemeService } from './services/theme.service';
+import { AuthService } from './services/auth.service';
 
 @Component({
   selector: 'app-root',
@@ -12,6 +13,17 @@ import { ThemeService } from './services/theme.service';
 })
 export class AppComponent {
   sidebarCollapsed = signal(false);
-  constructor(public themeService: ThemeService) {}
-  toggleSidebar() { this.sidebarCollapsed.update(v => !v); }
+  
+  constructor(
+    public themeService: ThemeService,
+    public authService: AuthService
+  ) {}
+
+  toggleSidebar() { 
+    this.sidebarCollapsed.update(v => !v); 
+  }
+
+  executeSignout() {
+    this.authService.logout();
+  }
 }
