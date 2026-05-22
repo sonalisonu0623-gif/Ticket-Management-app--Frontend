@@ -117,8 +117,8 @@
               <a [routerLink]="['/tickets', t.id]" class="ticket-link">{{ t.ticketNumber }}</a>
             </td>
             <td class="text-secondary text-sm">{{ t.projectName }}</td>
-            <td class="desc-cell text-secondary">
-              {{ t.issueDescription | slice:0:60 }}{{ (t.issueDescription?.length || 0) > 65 ? '…' : '' }}
+            <td class="desc-cell text-secondary" [title]="t.issueDescription">
+              {{ truncate(t.issueDescription, 60) }}
             </td>
             <td class="text-sm">
               <span *ngIf="t.assignedEmployeeName" class="assignee">

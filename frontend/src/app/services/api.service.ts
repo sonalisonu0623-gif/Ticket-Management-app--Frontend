@@ -6,10 +6,11 @@ import {
   Project, Employee, Ticket, TicketFilter,
   ApiResponse, PageResponse
 } from '../models/models';
+import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  private baseUrl = 'https://ticket-management-app-backend-5.onrender.com/api';
+  readonly baseUrl = environment.apiBaseUrl;
 
   constructor(private http: HttpClient) {}
 
@@ -43,13 +44,17 @@ export class ApiService {
 
   // Tickets
   getTickets(filter: TicketFilter = {}, page = 0, size = 10, sortBy = 'createdAt', sortDir = 'desc'): Observable<ApiResponse<PageResponse<Ticket>>> {
-    let params = new HttpParams().set('page', page).set('size', size).set('sortBy', sortBy).set('sortDir', sortDir);
-    if (filter.ticketNumber) params = params.set('ticketNumber', filter.ticketNumber);
-    if (filter.projectId) params = params.set('projectId', filter.projectId);
-    if (filter.employeeId) params = params.set('employeeId', filter.employeeId);
-    if (filter.priority) params = params.set('priority', filter.priority);
+    let params = new HttpParams()
+      .set('page', String(page))
+      .set('size', String(size))
+      .set('sortBy', sortBy)
+      .set('sortDir', sortDir);
+    if (filter.ticketNumber)  params = params.set('ticketNumber', filter.ticketNumber);
+    if (filter.projectId)     params = params.set('projectId', String(filter.projectId));
+    if (filter.employeeId)    params = params.set('employeeId', String(filter.employeeId));
+    if (filter.priority)      params = params.set('priority', filter.priority);
     if (filter.currentStatus) params = params.set('currentStatus', filter.currentStatus);
-    if (filter.supportLevel) params = params.set('supportLevel', filter.supportLevel);
+    if (filter.supportLevel)  params = params.set('supportLevel', filter.supportLevel);
     return this.http.get<ApiResponse<PageResponse<Ticket>>>(`${this.baseUrl}/tickets`, { params });
   }
 

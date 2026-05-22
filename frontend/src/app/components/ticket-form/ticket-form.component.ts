@@ -1,7 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { SpinnerComponent } from '../shared/spinner.component';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
@@ -13,7 +15,7 @@ import { Project, Employee, Ticket } from '../../models/models';
   imports: [CommonModule, ReactiveFormsModule, RouterModule, SpinnerComponent],
   templateUrl: './ticket-form.component.html',
 })
-export class TicketFormComponent implements OnInit {
+export class TicketFormComponent implements OnInit, OnDestroy {
   form!: FormGroup;
   projects: Project[] = [];
   employees: Employee[] = [];
@@ -23,9 +25,11 @@ export class TicketFormComponent implements OnInit {
   submitting = false;
   ticket?: Ticket;
 
-  priorities = ['P1 - Critical', 'P2 - High', 'P3 - Medium', 'P4 - Low'];
+  priorities    = ['P1 - Critical', 'P2 - High', 'P3 - Medium', 'P4 - Low'];
   supportLevels = ['L1', 'L2', 'L3'];
-  statuses = ['Open', 'In Progress', 'On Hold', 'Resolved', 'Closed'];
+  statuses      = ['Open', 'In Progress', 'On Hold', 'Resolved', 'Closed'];
+
+  private destroy$ = new Subject<void>();
 
   constructor(
     private fb: FormBuilder,
@@ -46,19 +50,26 @@ export class TicketFormComponent implements OnInit {
       this.loadTicket(this.ticketId);
     }
 
-    this.form.get('currentStatus')?.valueChanges.subscribe(status => {
+    // Conditionally require resolutionDetails when status is Resolved or Closed
+    this.form.get('currentStatus')?.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(status => {
       const resCtrl = this.form.get('resolutionDetails');
       if (status === 'Resolved' || status === 'Closed') {
-        resCtrl?.setValidators([Validators.required]);
+        resCtrl?.setValidators([Validators.required, Validators.minLength(5)]);
       } else {
         resCtrl?.clearValidators();
       }
-      resCtrl?.updateValueAndValidity();
+      resCtrl?.updateValueAndValidity({ emitEvent: false });
     });
 
-    this.form.get('responseDatetime')?.valueChanges.subscribe(() => {
+    // Auto-calculate resolution time when response datetime changes
+    this.form.get('responseDatetime')?.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
       this.calcResolutionTime();
     });
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   initForm() {
@@ -98,34 +109,43 @@ export class TicketFormComponent implements OnInit {
           ticketNumber:       t.ticketNumber,
           projectId:          t.projectId,
           issueDescription:   t.issueDescription,
-          assignedEmployeeId: t.assignedEmployeeId,
-          supportLevel:       t.supportLevel,
-          priority:           t.priority,
+          assignedEmployeeId: t.assignedEmployeeId ?? null,
+          supportLevel:       t.supportLevel ?? '',
+          priority:           t.priority ?? '',
           generationDatetime: t.generationDatetime ? this.toLocalStr(new Date(t.generationDatetime)) : '',
           responseDatetime:   t.responseDatetime   ? this.toLocalStr(new Date(t.responseDatetime))   : '',
-          resolutionTime:     t.resolutionTime,
-          currentStatus:      t.currentStatus,
-          resolutionDetails:  t.resolutionDetails,
-          remarks:            t.remarks
+          resolutionTime:     t.resolutionTime ?? '',
+          currentStatus:      t.currentStatus ?? 'Open',
+          resolutionDetails:  t.resolutionDetails ?? '',
+          remarks:            t.remarks ?? ''
         });
         this.loading = false;
       },
       error: () => {
         this.toast.error('Failed to load ticket');
         this.loading = false;
+        this.router.navigate(['/tickets']);
       }
     });
   }
 
   calcResolutionTime() {
-    const genStr = this.form.get('generationDatetime')?.value;
-    const resStr = this.form.get('responseDatetime')?.value;
-    if (!genStr || !resStr) { this.form.get('resolutionTime')?.setValue(''); return; }
+    // Use getRawValue() to access disabled generationDatetime
+    const raw = this.form.getRawValue();
+    const genStr = raw.generationDatetime;
+    const resStr = raw.responseDatetime;
+    if (!genStr || !resStr) {
+      this.form.get('resolutionTime')?.setValue('', { emitEvent: false });
+      return;
+    }
     const diff = new Date(resStr).getTime() - new Date(genStr).getTime();
-    if (diff < 0) { this.form.get('resolutionTime')?.setValue('Invalid — before generation'); return; }
+    if (diff < 0) {
+      this.form.get('resolutionTime')?.setValue('Invalid — before creation', { emitEvent: false });
+      return;
+    }
     const h = Math.floor(diff / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
-    this.form.get('resolutionTime')?.setValue(`${h}h ${m}m`);
+    this.form.get('resolutionTime')?.setValue(`${h}h ${m}m`, { emitEvent: false });
   }
 
   onSubmit() {
@@ -135,6 +155,15 @@ export class TicketFormComponent implements OnInit {
       return;
     }
     const raw = this.form.getRawValue();
+
+    // Validate response datetime is not before generation datetime
+    if (raw.responseDatetime && raw.generationDatetime) {
+      if (new Date(raw.responseDatetime) < new Date(raw.generationDatetime)) {
+        this.toast.error('Response date cannot be before the generation date');
+        return;
+      }
+    }
+
     const payload: Ticket = {
       projectId:          raw.projectId,
       issueDescription:   raw.issueDescription,

@@ -1,12 +1,13 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { debounceTime, takeUntil } from 'rxjs/operators';
 import { SpinnerComponent } from '../shared/spinner.component';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { Ticket, Project, Employee, TicketFilter } from '../../models/models';
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 @Component({
   selector: 'app-ticket-list',
@@ -14,7 +15,7 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
   imports: [CommonModule, RouterModule, ReactiveFormsModule, SpinnerComponent],
   templateUrl: './ticket-list.component.html',
 })
-export class TicketListComponent implements OnInit {
+export class TicketListComponent implements OnInit, OnDestroy {
   tickets: Ticket[] = [];
   projects: Project[] = [];
   employees: Employee[] = [];
@@ -31,6 +32,8 @@ export class TicketListComponent implements OnInit {
   priorities    = ['P1 - Critical', 'P2 - High', 'P3 - Medium', 'P4 - Low'];
   supportLevels = ['L1', 'L2', 'L3'];
   statuses      = ['Open', 'In Progress', 'On Hold', 'Resolved', 'Closed'];
+
+  private destroy$ = new Subject<void>();
 
   constructor(
     private api: ApiService,
@@ -52,10 +55,19 @@ export class TicketListComponent implements OnInit {
     this.api.getEmployees().subscribe({ next: e => this.employees = e });
     this.loadTickets();
 
-    this.filterForm.valueChanges.pipe(debounceTime(400), distinctUntilChanged()).subscribe(() => {
+    // Use debounceTime only — no distinctUntilChanged on objects (it compares by reference)
+    this.filterForm.valueChanges.pipe(
+      debounceTime(400),
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
       this.currentPage = 0;
       this.loadTickets();
     });
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadTickets() {
@@ -63,8 +75,8 @@ export class TicketListComponent implements OnInit {
     const f = this.filterForm.value;
     const filter: TicketFilter = {
       ticketNumber:  f.ticketNumber  || undefined,
-      projectId:     f.projectId     || undefined,
-      employeeId:    f.employeeId    || undefined,
+      projectId:     f.projectId     ? +f.projectId  : undefined,
+      employeeId:    f.employeeId    ? +f.employeeId : undefined,
       priority:      f.priority      || undefined,
       currentStatus: f.currentStatus || undefined,
       supportLevel:  f.supportLevel  || undefined,
@@ -105,7 +117,10 @@ export class TicketListComponent implements OnInit {
   }
 
   clearFilters() {
-    this.filterForm.reset();
+    this.filterForm.reset({
+      ticketNumber: '', projectId: '', employeeId: '',
+      priority: '', currentStatus: '', supportLevel: ''
+    });
   }
 
   get pages(): number[] {
@@ -139,5 +154,10 @@ export class TicketListComponent implements OnInit {
   sortIcon(field: string): string {
     if (this.sortBy !== field) return '↕';
     return this.sortDir === 'asc' ? '↑' : '↓';
+  }
+
+  truncate(text: string | undefined, len = 60): string {
+    if (!text) return '';
+    return text.length > len ? text.slice(0, len) + '…' : text;
   }
 }

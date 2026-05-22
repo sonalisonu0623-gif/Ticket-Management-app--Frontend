@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { ApiService } from '../../services/api.service';
 import { Ticket } from '../../models/models';
 
@@ -31,38 +32,23 @@ export class DashboardComponent implements OnInit {
 
   loadDashboard() {
     this.loading = true;
-    // Load all tickets to compute stats
-    this.api.getTickets({}, 0, 5, 'createdAt', 'desc').subscribe({
-      next: (res) => {
-        this.recentTickets = res.data.content;
-        this.stats.total = res.data.totalElements;
-        this.loadStatusStats();
+    forkJoin({
+      recent:     this.api.getTickets({}, 0, 5, 'createdAt', 'desc'),
+      open:       this.api.getTickets({ currentStatus: 'Open' }, 0, 1),
+      inProgress: this.api.getTickets({ currentStatus: 'In Progress' }, 0, 1),
+      resolved:   this.api.getTickets({ currentStatus: 'Resolved' }, 0, 1),
+      closed:     this.api.getTickets({ currentStatus: 'Closed' }, 0, 1),
+    }).subscribe({
+      next: (results) => {
+        this.recentTickets      = results.recent.data.content;
+        this.stats.total        = results.recent.data.totalElements;
+        this.stats.open         = results.open.data.totalElements;
+        this.stats.inProgress   = results.inProgress.data.totalElements;
+        this.stats.resolved     = results.resolved.data.totalElements;
+        this.stats.closed       = results.closed.data.totalElements;
+        this.loading = false;
       },
       error: () => { this.loading = false; }
-    });
-  }
-
-  loadStatusStats() {
-    let done = 0;
-    const statuses = [
-      { key: 'open', value: 'Open' },
-      { key: 'inProgress', value: 'In Progress' },
-      { key: 'resolved', value: 'Resolved' },
-      { key: 'closed', value: 'Closed' },
-    ];
-
-    statuses.forEach(s => {
-      this.api.getTickets({ currentStatus: s.value }, 0, 1).subscribe({
-        next: (res) => {
-          (this.stats as any)[s.key] = res.data.totalElements;
-          done++;
-          if (done === statuses.length) this.loading = false;
-        },
-        error: () => {
-          done++;
-          if (done === statuses.length) this.loading = false;
-        }
-      });
     });
   }
 
