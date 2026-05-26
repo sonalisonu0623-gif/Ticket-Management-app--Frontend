@@ -1,15 +1,11 @@
-<!-- UNAUTHENTICATED MODE (LOGIN PAGE) -->
 <div *ngIf="!authService.isAuthenticated()" class="auth-wrapper">
   <router-outlet></router-outlet>
 </div>
 
-<!-- AUTHENTICATED MODE (FULL DASHBOARD LAYOUT SHELL) -->
 <div *ngIf="authService.isAuthenticated()" class="app-shell" [class.sidebar-collapsed]="sidebarCollapsed()">
 
-  <!-- SIDEBAR OVERLAY (mobile) -->
   <div class="sidebar-overlay" (click)="toggleSidebar()" *ngIf="!sidebarCollapsed()"></div>
 
-  <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-logo">
@@ -66,7 +62,6 @@
       </a>
     </nav>
 
-    <!-- SIDEBAR FOOTER (WITH DYNAMIC DISCOVERY PROFILE DATA & SIGNOUT) -->
     <div class="sidebar-footer">
       <div class="sidebar-user" *ngIf="authService.currentUser() as user" style="position: relative; width: 100%;">
         <div class="user-avatar" style="text-transform: uppercase;">
@@ -80,7 +75,6 @@
             {{ user.role }}
           </span>
         </div>
-        <!-- Logout Action Button -->
         <button (click)="executeSignout()" class="topbar-icon-btn" title="Sign Out Session" style="margin-left: auto; border: none; background: transparent; cursor: pointer; color: inherit; padding: 4px;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -92,7 +86,6 @@
     </div>
   </aside>
 
-  <!-- MAIN -->
   <div class="main-wrapper">
     <header class="topbar">
       <div class="topbar-left">
@@ -102,15 +95,8 @@
           </svg>
         </button>
       </div>
+      
       <div class="topbar-right">
-        <button class="topbar-icon-btn" title="Notifications">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-            <path d="M13.73 21a2 2 0 01-3.46 0"/>
-          </svg>
-          <span class="notif-dot"></span>
-        </button>
-        
         <button class="theme-toggle" (click)="themeService.toggle()">
           <svg *ngIf="themeService.isDark()" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"/>
@@ -135,5 +121,4 @@
       <router-outlet></router-outlet>
     </main>
   </div>
-
 </div>
