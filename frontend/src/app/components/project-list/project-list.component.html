@@ -1,0 +1,129 @@
+<div class="list-page">
+
+  <!-- Header Row -->
+  <div class="list-header">
+    <div class="list-title">
+      <span class="title-accent">■</span>
+      PROJECTS
+      <span class="ticket-count">{{ totalElements }} records</span>
+    </div>
+    <a routerLink="/projects/new" class="btn-create">
+      <span>＋</span> CREATE PROJECT
+    </a>
+  </div>
+
+  <!-- Alerts -->
+  <div class="alert alert-success" *ngIf="successMessage">
+    <span>✓</span> {{ successMessage }}
+  </div>
+  <div class="alert alert-error" *ngIf="error">
+    <span>✕</span> {{ error }}
+  </div>
+
+  <!-- Search & Filter Bar -->
+  <div class="filter-bar">
+    <div class="search-box">
+      <span class="search-icon">⌕</span>
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Search by name or code..."
+        [(ngModel)]="searchQuery"
+        (ngModelChange)="onSearchChange()"
+      />
+    </div>
+    <select class="filter-select" [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()">
+      <option *ngFor="let opt of statusOptions" [value]="opt.value">{{ opt.label }}</option>
+    </select>
+    <button class="btn-clear" (click)="clearFilters()" title="Clear all filters">✕ Clear</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-container">
+    <div class="loading-overlay" *ngIf="loading">
+      <div class="spinner"></div>
+      <span>Loading projects...</span>
+    </div>
+
+    <table class="ticket-table" *ngIf="!loading">
+      <thead>
+        <tr>
+          <th>PROJECT CODE</th>
+          <th>PROJECT NAME</th>
+          <th>DESCRIPTION</th>
+          <th>STATUS</th>
+          <th>START DATE</th>
+          <th>END DATE</th>
+          <th>CREATED</th>
+          <th>ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let project of projects" class="ticket-row">
+          <td>
+            <span class="ticket-id-badge">{{ project.projectCode }}</span>
+          </td>
+          <td>
+            <span class="project-name">{{ project.projectName }}</span>
+          </td>
+          <td>
+            <span class="description-text" [title]="project.description || ''">
+              {{ (project.description || '—') | slice:0:60 }}{{ project.description && project.description.length > 60 ? '...' : '' }}
+            </span>
+          </td>
+          <td>
+            <span class="status-badge" [ngClass]="getStatusClass(project.status)">
+              {{ statusLabels[project.status] }}
+            </span>
+          </td>
+          <td>
+            <span class="date-text">{{ project.startDate ? (project.startDate | date:'dd MMM yy') : '—' }}</span>
+          </td>
+          <td>
+            <span class="date-text">{{ project.endDate ? (project.endDate | date:'dd MMM yy') : '—' }}</span>
+          </td>
+          <td>
+            <span class="date-text">{{ project.createdAt | date:'dd MMM yy, HH:mm' }}</span>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <a [routerLink]="['/projects/edit', project.id]" class="btn-action btn-edit" title="Edit">✎</a>
+              <button
+                class="btn-action btn-delete"
+                (click)="deleteProject(project.id!)"
+                [disabled]="deleteLoading === project.id"
+                title="Delete"
+              >
+                <span *ngIf="deleteLoading !== project.id">✕</span>
+                <span *ngIf="deleteLoading === project.id">⋯</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="projects.length === 0 && !loading">
+          <td colspan="8" class="empty-state">
+            <div class="empty-icon">◈</div>
+            <div>No projects found</div>
+            <div class="empty-sub">Try adjusting your filters or <a routerLink="/projects/new">create a new project</a></div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" *ngIf="totalPages > 1">
+    <button class="page-btn" (click)="goToPage(0)" [disabled]="currentPage === 0">«</button>
+    <button class="page-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0">‹</button>
+    <button
+      *ngFor="let p of pages"
+      class="page-btn"
+      [class.active]="p === currentPage"
+      (click)="goToPage(p)"
+    >{{ p + 1 }}</button>
+    <button class="page-btn" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages - 1">›</button>
+    <button class="page-btn" (click)="goToPage(totalPages - 1)" [disabled]="currentPage === totalPages - 1">»</button>
+    <span class="page-info">Page {{ currentPage + 1 }} of {{ totalPages }} · {{ totalElements }} total</span>
+  </div>
+
+</div>

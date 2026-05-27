@@ -1,0 +1,123 @@
+<div class="detail-page">
+
+  <!-- Header -->
+  <div class="page-header">
+    <a routerLink="/tickets" class="back-link">‹ Back to Tickets</a>
+    <div class="header-row" *ngIf="ticket">
+      <div class="page-title">
+        <span class="ticket-id-large">{{ ticket.ticketId }}</span>
+        <span class="status-badge" [ngClass]="getStatusClass(ticket.currentStatus)">
+          {{ statusLabels[ticket.currentStatus] }}
+        </span>
+        <span class="priority-badge" [ngClass]="getPriorityClass(ticket.priority)">
+          {{ priorityLabels[ticket.priority] }}
+        </span>
+      </div>
+      <div class="header-actions">
+        <a [routerLink]="['/tickets/edit', ticket.id]" class="btn-edit">✎ EDIT</a>
+        <button class="btn-delete" (click)="deleteTicket()" [disabled]="deleteLoading">
+          <span *ngIf="!deleteLoading">✕ DELETE</span>
+          <span *ngIf="deleteLoading">⋯</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <span>Loading ticket details...</span>
+  </div>
+
+  <!-- Error -->
+  <div class="alert alert-error" *ngIf="error">
+    <span>✕</span> {{ error }}
+  </div>
+
+  <!-- Detail Card -->
+  <div class="detail-card" *ngIf="ticket && !loading">
+
+    <!-- Section: Core Details -->
+    <div class="detail-section">
+      <div class="section-label">CORE DETAILS</div>
+      <div class="detail-grid">
+        <div class="detail-field">
+          <div class="field-label">TICKET ID</div>
+          <div class="field-value field-mono highlight">{{ ticket.ticketId }}</div>
+        </div>
+        <div class="detail-field">
+          <div class="field-label">PROJECT ASSIGNMENT</div>
+          <div class="field-value">
+            <span class="project-tag">{{ ticket.projectAssignment }}</span>
+          </div>
+        </div>
+        <div class="detail-field">
+          <div class="field-label">ASSIGNED EMPLOYEE</div>
+          <div class="field-value">{{ ticket.assignedEmployee || '— Not Assigned —' }}</div>
+        </div>
+        <div class="detail-field">
+          <div class="field-label">SUPPORT LEVEL</div>
+          <div class="field-value">
+            <span class="level-badge">{{ ticket.supportLevel }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section: Issue Description -->
+    <div class="detail-section">
+      <div class="section-label">ISSUE DESCRIPTION</div>
+      <div class="detail-text-block">{{ ticket.issueDescription }}</div>
+    </div>
+
+    <!-- Section: Timeline -->
+    <div class="detail-section">
+      <div class="section-label">TIMELINE</div>
+      <div class="timeline-grid">
+        <div class="timeline-item">
+          <div class="tl-label">Generation Date/Time</div>
+          <div class="tl-value">{{ (ticket.generationDateTime | date:'dd MMM yyyy, HH:mm') || '—' }}</div>
+        </div>
+        <div class="timeline-arrow">→</div>
+        <div class="timeline-item">
+          <div class="tl-label">Response Date/Time</div>
+          <div class="tl-value">{{ (ticket.responseDateTime | date:'dd MMM yyyy, HH:mm') || '—' }}</div>
+        </div>
+        <div class="timeline-arrow">→</div>
+        <div class="timeline-item">
+          <div class="tl-label">Resolution Time</div>
+          <div class="tl-value">{{ (ticket.resolutionTime | date:'dd MMM yyyy, HH:mm') || '—' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section: Resolution Details -->
+    <div class="detail-section" *ngIf="ticket.resolutionDetails">
+      <div class="section-label">RESOLUTION DETAILS</div>
+      <div class="detail-text-block resolved">{{ ticket.resolutionDetails }}</div>
+    </div>
+
+    <!-- Section: Remarks -->
+    <div class="detail-section" *ngIf="ticket.remarks">
+      <div class="section-label">REMARKS</div>
+      <div class="detail-text-block remarks">{{ ticket.remarks }}</div>
+    </div>
+
+    <!-- Section: Audit -->
+    <div class="detail-section">
+      <div class="section-label">AUDIT INFO</div>
+      <div class="detail-grid">
+        <div class="detail-field">
+          <div class="field-label">CREATED AT</div>
+          <div class="field-value field-mono dim">{{ ticket.createdAt | date:'dd MMM yyyy, HH:mm:ss' }}</div>
+        </div>
+        <div class="detail-field">
+          <div class="field-label">LAST UPDATED</div>
+          <div class="field-value field-mono dim">{{ ticket.updatedAt | date:'dd MMM yyyy, HH:mm:ss' }}</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>

@@ -1,0 +1,299 @@
+.login-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-base);
+  padding: 2rem;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-accent);
+  border-radius: 8px;
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+/* Brand */
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.brand-icon {
+  font-size: 2rem;
+  color: var(--accent);
+  filter: drop-shadow(0 0 10px var(--accent));
+  line-height: 1;
+}
+
+.brand-title {
+  font-family: 'Courier New', monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--text-bright);
+}
+
+.brand-sub {
+  color: var(--accent);
+  opacity: 0.7;
+}
+
+.brand-tagline {
+  font-family: 'Courier New', monospace;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  margin-top: 0.2rem;
+}
+
+/* Header */
+.login-header { display: flex; flex-direction: column; gap: 0.4rem; }
+
+.login-title {
+  font-family: 'Courier New', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.title-mark { color: var(--accent); }
+
+.login-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Alert */
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  font-size: 0.82rem;
+}
+.alert-error {
+  background: rgba(255,107,107,0.1);
+  border: 1px solid rgba(255,107,107,0.3);
+  color: #ff6b6b;
+}
+.alert-icon { flex-shrink: 0; font-weight: 700; }
+
+/* Form */
+form { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.form-group { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.form-label {
+  font-family: 'Courier New', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.form-label.required::after { content: '*'; color: #ff6b6b; margin-left: 2px; }
+.label-prefix { color: var(--accent); opacity: 0.5; font-size: 0.65rem; }
+
+.form-control {
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  background: var(--input-bg);
+  border: 1px solid var(--border-mid);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+  box-sizing: border-box;
+}
+.form-control:focus { border-color: var(--accent-border); background: var(--accent-hover); }
+.form-control.invalid { border-color: rgba(255,107,107,0.5); }
+
+.password-wrapper { position: relative; }
+.password-wrapper .form-control { padding-right: 3rem; }
+
+.password-toggle {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--text-muted);
+  padding: 0;
+  line-height: 1;
+}
+
+.field-error {
+  font-size: 0.72rem;
+  color: #ff6b6b;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.field-error::before {
+  content: '!';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  background: rgba(255,107,107,0.2);
+  border-radius: 50%;
+  font-size: 0.65rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.form-row-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.remember-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+.remember-check { accent-color: var(--accent); cursor: pointer; }
+.remember-text {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  font-family: 'Courier New', monospace;
+}
+
+.btn-login {
+  width: 100%;
+  padding: 0.85rem;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 4px;
+  color: var(--accent);
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 0.25rem;
+}
+.btn-login:hover:not(:disabled) {
+  background: var(--accent-hover);
+  box-shadow: 0 0 24px rgba(0,212,255,0.2);
+}
+.btn-login:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.loading-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+}
+.mini-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--accent-border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Footer */
+.login-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.footer-text {
+  font-family: 'Courier New', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+
+.theme-toggle-login {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+  background: transparent;
+  border: 1px solid var(--border-mid);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.theme-toggle-login:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+/* ── Login Mode Selector ─────────────────────────────────────────────────── */
+.mode-selector {
+  display: flex;
+  gap: 0.5rem;
+  background: var(--bg-surface-3);
+  border: 1px solid var(--border-mid);
+  border-radius: 6px;
+  padding: 0.25rem;
+}
+
+.mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-btn:hover {
+  color: var(--text-secondary);
+  background: var(--bg-surface-2);
+}
+
+.mode-btn.mode-active {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.mode-icon { font-size: 0.85rem; }

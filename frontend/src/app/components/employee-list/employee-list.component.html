@@ -1,0 +1,127 @@
+<div class="list-page">
+
+  <!-- Header Row -->
+  <div class="list-header">
+    <div class="list-title">
+      <span class="title-accent">■</span>
+      EMPLOYEES
+      <span class="ticket-count">{{ totalElements }} records</span>
+    </div>
+    <a routerLink="/employees/new" class="btn-create">
+      <span>＋</span> CREATE EMPLOYEE
+    </a>
+  </div>
+
+  <!-- Alerts -->
+  <div class="alert alert-success" *ngIf="successMessage">
+    <span>✓</span> {{ successMessage }}
+  </div>
+  <div class="alert alert-error" *ngIf="error">
+    <span>✕</span> {{ error }}
+  </div>
+
+  <!-- Search & Filter Bar -->
+  <div class="filter-bar">
+    <div class="search-box">
+      <span class="search-icon">⌕</span>
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Search by name, email, or department..."
+        [(ngModel)]="searchQuery"
+        (ngModelChange)="onSearchChange()"
+      />
+    </div>
+    <select class="filter-select" [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()">
+      <option *ngFor="let opt of statusOptions" [value]="opt.value">{{ opt.label }}</option>
+    </select>
+    <button class="btn-clear" (click)="clearFilters()" title="Clear all filters">✕ Clear</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-container">
+    <div class="loading-overlay" *ngIf="loading">
+      <div class="spinner"></div>
+      <span>Loading employees...</span>
+    </div>
+
+    <table class="ticket-table" *ngIf="!loading">
+      <thead>
+        <tr>
+          <th>NAME</th>
+          <th>EMAIL</th>
+          <th>DESIGNATION</th>
+          <th>DEPARTMENT</th>
+          <th>ASSIGNED PROJECT</th>
+          <th>STATUS</th>
+          <th>CREATED</th>
+          <th>ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let employee of employees" class="ticket-row">
+          <td>
+            <span class="emp-name">{{ employee.employeeName }}</span>
+          </td>
+          <td>
+            <span class="emp-email">{{ employee.email }}</span>
+          </td>
+          <td>
+            <span class="description-text">{{ employee.designation || '—' }}</span>
+          </td>
+          <td>
+            <span class="project-tag">{{ employee.department || '—' }}</span>
+          </td>
+          <td>
+            <span class="description-text">{{ employee.assignedProject || '—' }}</span>
+          </td>
+          <td>
+            <span class="status-badge" [ngClass]="getStatusClass(employee.status)">
+              {{ statusLabels[employee.status] }}
+            </span>
+          </td>
+          <td>
+            <span class="date-text">{{ employee.createdAt | date:'dd MMM yy, HH:mm' }}</span>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <a [routerLink]="['/employees/edit', employee.id]" class="btn-action btn-edit" title="Edit">✎</a>
+              <button
+                class="btn-action btn-delete"
+                (click)="deleteEmployee(employee.id!)"
+                [disabled]="deleteLoading === employee.id"
+                title="Delete"
+              >
+                <span *ngIf="deleteLoading !== employee.id">✕</span>
+                <span *ngIf="deleteLoading === employee.id">⋯</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="employees.length === 0 && !loading">
+          <td colspan="8" class="empty-state">
+            <div class="empty-icon">◉</div>
+            <div>No employees found</div>
+            <div class="empty-sub">Try adjusting your filters or <a routerLink="/employees/new">add a new employee</a></div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" *ngIf="totalPages > 1">
+    <button class="page-btn" (click)="goToPage(0)" [disabled]="currentPage === 0">«</button>
+    <button class="page-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0">‹</button>
+    <button
+      *ngFor="let p of pages"
+      class="page-btn"
+      [class.active]="p === currentPage"
+      (click)="goToPage(p)"
+    >{{ p + 1 }}</button>
+    <button class="page-btn" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages - 1">›</button>
+    <button class="page-btn" (click)="goToPage(totalPages - 1)" [disabled]="currentPage === totalPages - 1">»</button>
+    <span class="page-info">Page {{ currentPage + 1 }} of {{ totalPages }} · {{ totalElements }} total</span>
+  </div>
+
+</div>
