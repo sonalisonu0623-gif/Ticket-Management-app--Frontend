@@ -1,202 +1,178 @@
-<div class="form-page">
+<div class="page-wrapper">
 
-  <!-- Page Header -->
   <div class="page-header">
-    <a routerLink="/tickets" class="back-link">‹ Back to Tickets</a>
-    <div class="page-title">
-      <span class="title-mark">{{ isEditMode ? '✎' : '＋' }}</span>
-      {{ isEditMode ? 'UPDATE TICKET' : 'CREATE TICKET' }}
-      <span class="ticket-ref" *ngIf="existingTicketId">· {{ existingTicketId }}</span>
+    <div class="page-title-block">
+      <h1 class="page-title">{{ isEdit ? 'Edit Ticket' : 'New Ticket' }}</h1>
+      <p class="page-subtitle">{{ isEdit ? 'Update ticket information' : 'Create a new support incident' }}</p>
+    </div>
+    <div class="page-actions">
+      <a routerLink="/tickets" class="btn btn-secondary">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back to List
+      </a>
     </div>
   </div>
 
-  <!-- Alerts -->
-  <div class="alert alert-success" *ngIf="successMessage">
-    <span>✓</span> {{ successMessage }}
-  </div>
-  <div class="alert alert-error" *ngIf="error">
-    <span>✕</span> {{ error }}
-  </div>
+  <div *ngIf="loading" class="spinner-wrap"><div class="spinner"></div></div>
 
-  <!-- Loading -->
-  <div class="loading-state" *ngIf="loading">
-    <div class="spinner"></div>
-    <span>Loading ticket data...</span>
-  </div>
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" *ngIf="!loading" autocomplete="off">
 
-  <!-- Form Card -->
-  <div class="form-card" *ngIf="!loading" [formGroup]="ticketForm">
-
-    <!-- Row 1: Ticket ID + Project -->
-    <div class="form-grid form-grid-2">
-      <div class="form-group">
-        <label class="form-label">
-          <span class="label-prefix">01</span> TICKET ID
-        </label>
-        <div class="readonly-field">
-          <span class="readonly-value">{{ existingTicketId || 'Auto-generated on save' }}</span>
-          <span class="readonly-badge">AUTO</span>
+    <!-- Identification -->
+    <div class="form-section">
+      <div class="section-header">
+        <span class="section-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        </span>
+        <h2 class="section-title">Identification</h2>
+      </div>
+      <div class="form-grid two-col">
+        <div class="form-field">
+          <label class="field-label required">Project Assignment</label>
+          <select formControlName="projectId" class="field-select" [class.invalid]="hasError('projectId')">
+            <option [ngValue]="null" disabled>Select project...</option>
+            <option *ngFor="let p of projects" [ngValue]="p.id">{{ p.projectName }}</option>
+          </select>
+          <span class="field-error" *ngIf="hasError('projectId')">{{ getError('projectId') }}</span>
         </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label required">
-          <span class="label-prefix">02</span> PROJECT ASSIGNMENT
-        </label>
-        <select class="form-control" formControlName="projectAssignment" [class.invalid]="isFieldInvalid('projectAssignment')">
-          <option value="">-- Select Project --</option>
-          <option *ngFor="let p of projectOptions" [value]="p.projectName">{{ p.projectCode }} — {{ p.projectName }}</option>
-        </select>
-        <div class="field-error" *ngIf="isFieldInvalid('projectAssignment')">{{ getFieldError('projectAssignment') }}</div>
-      </div>
-    </div>
-
-    <!-- Row 2: Issue Description -->
-    <div class="form-grid form-grid-1">
-      <div class="form-group">
-        <label class="form-label required">
-          <span class="label-prefix">03</span> ISSUE DESCRIPTION
-        </label>
-        <textarea
-          class="form-control textarea"
-          formControlName="issueDescription"
-          rows="4"
-          placeholder="Describe the issue in detail..."
-          [class.invalid]="isFieldInvalid('issueDescription')"
-        ></textarea>
-        <div class="field-error" *ngIf="isFieldInvalid('issueDescription')">{{ getFieldError('issueDescription') }}</div>
-      </div>
-    </div>
-
-    <!-- Row 3: Assigned Employee + Support Level + Priority -->
-    <div class="form-grid form-grid-3">
-      <div class="form-group">
-        <label class="form-label">
-          <span class="label-prefix">04</span> ASSIGN TO EMPLOYEE
-        </label>
-        <select class="form-control" formControlName="assignedEmployee">
-          <option value="">-- Unassigned --</option>
-          <option *ngFor="let e of employeeOptions" [value]="e.employeeName">{{ e.employeeName }} ({{ e.designation || e.department || e.role }})</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label required">
-          <span class="label-prefix">05</span> SUPPORT LEVEL
-        </label>
-        <select class="form-control" formControlName="supportLevel" [class.invalid]="isFieldInvalid('supportLevel')">
-          <option *ngFor="let lvl of supportLevels" [value]="lvl">{{ lvl }}</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label required">
-          <span class="label-prefix">06</span> PRIORITY
-        </label>
-        <select class="form-control" formControlName="priority" [class.invalid]="isFieldInvalid('priority')">
-          <option *ngFor="let p of priorities" [value]="p.value">{{ p.label }}</option>
-        </select>
-        <div class="priority-indicator" [ngClass]="'pi-' + ticketForm.get('priority')?.value?.toLowerCase()"></div>
-      </div>
-    </div>
-
-    <!-- Row 4: DateTime Fields -->
-    <div class="form-grid form-grid-3">
-      <div class="form-group">
-        <label class="form-label">
-          <span class="label-prefix">07</span> GENERATION DATE/TIME
-        </label>
-        <input
-          type="datetime-local"
-          class="form-control"
-          formControlName="generationDateTime"
-        />
-      </div>
-      <div class="form-group">
-        <label class="form-label">
-          <span class="label-prefix">08</span> RESPONSE DATE/TIME
-        </label>
-        <input
-          type="datetime-local"
-          class="form-control"
-          formControlName="responseDateTime"
-        />
-      </div>
-      <div class="form-group">
-        <label class="form-label">
-          <span class="label-prefix">09</span> RESOLUTION TIME
-        </label>
-        <input
-          type="datetime-local"
-          class="form-control"
-          formControlName="resolutionTime"
-        />
-      </div>
-    </div>
-
-    <!-- Row 5: Current Status -->
-    <div class="form-grid form-grid-1">
-      <div class="form-group">
-        <label class="form-label required">
-          <span class="label-prefix">10</span> CURRENT STATUS
-        </label>
-        <div class="status-selector">
-          <label
-            *ngFor="let s of statuses"
-            class="status-option"
-            [class.selected]="ticketForm.get('currentStatus')?.value === s.value"
-            [ngClass]="'so-' + s.value.toLowerCase().replace('_', '-')"
-          >
-            <input type="radio" formControlName="currentStatus" [value]="s.value" style="display:none" />
-            <span class="status-dot"></span>
-            {{ s.label }}
-          </label>
+        <div class="form-field">
+          <label class="field-label">Ticket ID</label>
+          <div class="field-readonly-wrap">
+            <input formControlName="ticketNumber" class="field-input readonly" placeholder="Auto-generated on save" readonly>
+            <span class="readonly-badge">AUTO</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Row 6: Resolution Details + Remarks -->
-    <div class="form-grid form-grid-2">
-      <div class="form-group">
-        <label class="form-label">
-          <span class="label-prefix">11</span> RESOLUTION DETAILS
-        </label>
-        <textarea
-          class="form-control textarea"
-          formControlName="resolutionDetails"
-          rows="3"
-          placeholder="Describe the resolution steps taken..."
-        ></textarea>
+    <!-- Issue Details -->
+    <div class="form-section">
+      <div class="section-header">
+        <span class="section-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </span>
+        <h2 class="section-title">Issue Details</h2>
       </div>
-      <div class="form-group">
-        <label class="form-label">
-          <span class="label-prefix">12</span> REMARKS
+      <div class="form-field">
+        <label class="field-label required">Issue Description</label>
+        <textarea formControlName="issueDescription" class="field-textarea" rows="4"
+          placeholder="Describe the issue in detail. Include steps to reproduce, affected users, and any error messages..."
+          [class.invalid]="hasError('issueDescription')"></textarea>
+        <span class="field-error" *ngIf="hasError('issueDescription')">{{ getError('issueDescription') }}</span>
+      </div>
+    </div>
+
+    <!-- Assignment & Priority -->
+    <div class="form-section">
+      <div class="section-header">
+        <span class="section-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </span>
+        <h2 class="section-title">Assignment &amp; Priority</h2>
+      </div>
+      <div class="form-grid three-col">
+        <div class="form-field">
+          <label class="field-label">Assign To Employee</label>
+          <select formControlName="assignedEmployeeId" class="field-select">
+            <option [ngValue]="null">Unassigned</option>
+            <option *ngFor="let e of employees" [ngValue]="e.id">{{ e.employeeName }}</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="field-label">Support Level</label>
+          <select formControlName="supportLevel" class="field-select">
+            <option value="">Select level...</option>
+            <option *ngFor="let l of supportLevels" [value]="l">{{ l }}</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="field-label">Priority</label>
+          <select formControlName="priority" class="field-select">
+            <option value="">Select priority...</option>
+            <option *ngFor="let p of priorities" [value]="p">{{ p }}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="form-section">
+      <div class="section-header">
+        <span class="section-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </span>
+        <h2 class="section-title">Timeline</h2>
+      </div>
+      <div class="form-grid three-col">
+        <div class="form-field">
+          <label class="field-label">Generation Date / Time</label>
+          <div class="field-readonly-wrap">
+            <input formControlName="generationDatetime" type="datetime-local" class="field-input readonly" readonly>
+            <span class="readonly-badge">AUTO</span>
+          </div>
+        </div>
+        <div class="form-field">
+          <label class="field-label">Response Date / Time</label>
+          <input formControlName="responseDatetime" type="datetime-local" class="field-input">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Resolution Time</label>
+          <div class="field-readonly-wrap">
+            <input formControlName="resolutionTime" class="field-input readonly" placeholder="Auto-calculated" readonly>
+            <span class="readonly-badge">AUTO</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status & Resolution -->
+    <div class="form-section">
+      <div class="section-header">
+        <span class="section-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        </span>
+        <h2 class="section-title">Status &amp; Resolution</h2>
+      </div>
+      <div class="form-grid two-col" style="margin-bottom: 18px;">
+        <div class="form-field" style="margin-bottom:0;">
+          <label class="field-label">Current Status</label>
+          <select formControlName="currentStatus" class="field-select">
+            <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+          </select>
+        </div>
+        <div></div>
+      </div>
+      <div class="form-field" style="margin-bottom:16px;">
+        <label class="field-label" [class.required]="isResolutionRequired">
+          Resolution Details
+          <span class="label-hint" *ngIf="isResolutionRequired">Required for Resolved / Closed</span>
         </label>
-        <textarea
-          class="form-control textarea"
-          formControlName="remarks"
-          rows="3"
-          placeholder="Any additional notes or remarks..."
-        ></textarea>
+        <textarea formControlName="resolutionDetails" class="field-textarea" rows="3"
+          [placeholder]="isResolutionRequired ? 'Explain how the issue was resolved...' : 'Optional resolution details...'"
+          [class.invalid]="hasError('resolutionDetails')"></textarea>
+        <span class="field-error" *ngIf="hasError('resolutionDetails')">{{ getError('resolutionDetails') }}</span>
+      </div>
+      <div class="form-field" style="margin-bottom:0;">
+        <label class="field-label">Remarks</label>
+        <textarea formControlName="remarks" class="field-textarea" rows="2" placeholder="Any additional notes or context..."></textarea>
       </div>
     </div>
 
     <!-- Actions -->
     <div class="form-actions">
-      <button
-        type="button"
-        class="btn-submit"
-        (click)="onSubmit()"
-        [disabled]="submitting"
-      >
-        <span *ngIf="!submitting">{{ isEditMode ? '↑ UPDATE RECORD' : '✓ ADD RECORD' }}</span>
-        <span *ngIf="submitting" class="submitting-text">
-          <span class="mini-spinner"></span>
-          {{ isEditMode ? 'UPDATING...' : 'CREATING...' }}
-        </span>
+      <button type="submit" class="btn btn-primary" [disabled]="submitting">
+        <span class="btn-spinner" *ngIf="submitting"></span>
+        <svg *ngIf="!submitting" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v14a2 2 0 01-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+        </svg>
+        {{ submitting ? 'Saving...' : (isEdit ? 'Update Ticket' : 'Save Ticket') }}
       </button>
-      <button type="button" class="btn-reset" (click)="onReset()" [disabled]="submitting">
-        ↺ RESET FORM
+      <button type="button" class="btn btn-secondary" (click)="resetForm()" [disabled]="submitting">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.33"/></svg>
+        Reset
       </button>
-      <a routerLink="/tickets" class="btn-cancel">✕ CANCEL</a>
+      <a routerLink="/tickets" class="btn btn-ghost">Cancel</a>
     </div>
 
-  </div>
+  </form>
 </div>

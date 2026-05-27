@@ -1,75 +1,63 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
-import { FormsModule } from '@angular/forms';
-import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
-import { TicketService } from '../../services/ticket.service';
-import {
-  Ticket,
-  CurrentStatus,
-  Priority,
-  DashboardStats,
-  PRIORITY_LABELS,
-  STATUS_LABELS
-} from '../../models/ticket.model';
+import { RouterModule } from '@angular/router';
+import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { debounceTime, takeUntil } from 'rxjs/operators';
+import { SpinnerComponent } from '../shared/spinner.component';
+import { ApiService } from '../../services/api.service';
+import { ToastService } from '../../services/toast.service';
+import { Ticket, Project, Employee, TicketFilter } from '../../models/models';
 
 @Component({
   selector: 'app-ticket-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
+  imports: [CommonModule, RouterModule, ReactiveFormsModule, SpinnerComponent],
   templateUrl: './ticket-list.component.html',
-  styleUrls: ['./ticket-list.component.css']
 })
 export class TicketListComponent implements OnInit, OnDestroy {
   tickets: Ticket[] = [];
-  dashboardStats: DashboardStats | null = null;
-  loading = false;
-  statsLoading = false;
-  deleteLoading: number | null = null;
-  error: string | null = null;
-  successMessage: string | null = null;
+  projects: Project[] = [];
+  employees: Employee[] = [];
+  filterForm!: FormGroup;
 
-  // Pagination
-  currentPage = 0;
-  pageSize = 10;
+  loading = false;
   totalElements = 0;
   totalPages = 0;
+  currentPage = 0;
+  pageSize = 10;
+  sortBy = 'createdAt';
+  sortDir = 'desc';
 
-  // Search & Filter
-  searchQuery = '';
-  filterStatus: CurrentStatus | '' = '';
-  filterPriority: Priority | '' = '';
-  filterProject = '';
+  priorities    = ['P1 - Critical', 'P2 - High', 'P3 - Medium', 'P4 - Low'];
+  supportLevels = ['L1', 'L2', 'L3'];
+  statuses      = ['Open', 'In Progress', 'On Hold', 'Resolved', 'Closed'];
 
-  searchSubject = new Subject<string>();
   private destroy$ = new Subject<void>();
 
-  priorityLabels = PRIORITY_LABELS;
-  statusLabels = STATUS_LABELS;
+  constructor(
+    private api: ApiService,
+    private toast: ToastService,
+    private fb: FormBuilder
+  ) {}
 
-  statusOptions: { value: CurrentStatus | '', label: string }[] = [
-    { value: '', label: 'All Statuses' },
-    { value: 'OPEN', label: 'Open' },
-    { value: 'IN_PROGRESS', label: 'In Progress' },
-    { value: 'RESOLVED', label: 'Resolved' },
-    { value: 'CLOSED', label: 'Closed' }
-  ];
+  ngOnInit() {
+    this.filterForm = this.fb.group({
+      ticketNumber:  [''],
+      projectId:     [''],
+      employeeId:    [''],
+      priority:      [''],
+      currentStatus: [''],
+      supportLevel:  ['']
+    });
 
-  priorityOptions: { value: Priority | '', label: string }[] = [
-    { value: '', label: 'All Priorities' },
-    { value: 'P1_CRITICAL', label: 'P1 - Critical' },
-    { value: 'P2_HIGH', label: 'P2 - High' },
-    { value: 'P3_MEDIUM', label: 'P3 - Medium' },
-    { value: 'P4_LOW', label: 'P4 - Low' }
-  ];
-
-  ngOnInit(): void {
-    this.loadDashboardStats();
+    this.api.getProjects().subscribe({ next: p => this.projects = p });
+    this.api.getEmployees().subscribe({ next: e => this.employees = e });
     this.loadTickets();
 
-    this.searchSubject.pipe(
+    // Use debounceTime only — no distinctUntilChanged on objects (it compares by reference)
+    this.filterForm.valueChanges.pipe(
       debounceTime(400),
-      distinctUntilChanged(),
       takeUntil(this.destroy$)
     ).subscribe(() => {
       this.currentPage = 0;
@@ -77,138 +65,99 @@ export class TicketListComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy(): void {
+  ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  loadDashboardStats(): void {
-    this.statsLoading = true;
-    this.ticketService.getDashboardStats().subscribe({
-      next: (stats) => {
-        this.dashboardStats = stats;
-        this.statsLoading = false;
-      },
-      error: () => { this.statsLoading = false; }
-    });
-  }
-
-  loadTickets(): void {
+  loadTickets() {
     this.loading = true;
-    this.error = null;
+    const f = this.filterForm.value;
+    const filter: TicketFilter = {
+      ticketNumber:  f.ticketNumber  || undefined,
+      projectId:     f.projectId     ? +f.projectId  : undefined,
+      employeeId:    f.employeeId    ? +f.employeeId : undefined,
+      priority:      f.priority      || undefined,
+      currentStatus: f.currentStatus || undefined,
+      supportLevel:  f.supportLevel  || undefined,
+    };
 
-    const hasFilters = this.searchQuery || this.filterStatus || this.filterPriority || this.filterProject;
-
-    if (hasFilters) {
-      this.ticketService.searchTickets({
-        ticketId: this.searchQuery || undefined,
-        projectAssignment: this.filterProject || undefined,
-        status: (this.filterStatus as CurrentStatus) || undefined,
-        priority: (this.filterPriority as Priority) || undefined,
-        page: this.currentPage,
-        size: this.pageSize,
-        sortBy: 'createdAt',
-        sortDir: 'desc'
-      }).subscribe({
-        next: (res) => {
-          this.tickets = res.data.content;
-          this.totalElements = res.data.totalElements;
-          this.totalPages = res.data.totalPages;
-          this.loading = false;
-        },
-        error: (err) => {
-          this.error = 'Failed to load tickets. Please try again.';
-          this.loading = false;
-        }
-      });
-    } else {
-      this.ticketService.getTickets(this.currentPage, this.pageSize).subscribe({
-        next: (res) => {
-          this.tickets = res.data.content;
-          this.totalElements = res.data.totalElements;
-          this.totalPages = res.data.totalPages;
-          this.loading = false;
-        },
-        error: (err) => {
-          this.error = 'Failed to load tickets. Please try again.';
-          this.loading = false;
-        }
-      });
-    }
-  }
-
-  onSearchChange(): void {
-    this.searchSubject.next(this.searchQuery);
-  }
-
-  onFilterChange(): void {
-    this.currentPage = 0;
-    this.loadTickets();
-  }
-
-  clearFilters(): void {
-    this.searchQuery = '';
-    this.filterStatus = '';
-    this.filterPriority = '';
-    this.filterProject = '';
-    this.currentPage = 0;
-    this.loadTickets();
-  }
-
-  deleteTicket(id: number): void {
-    if (!confirm('Are you sure you want to delete this ticket? This action cannot be undone.')) return;
-
-    this.deleteLoading = id;
-    this.ticketService.deleteTicket(id).subscribe({
-      next: () => {
-        this.successMessage = 'Ticket deleted successfully';
-        this.deleteLoading = null;
-        this.loadTickets();
-        this.loadDashboardStats();
-        setTimeout(() => this.successMessage = null, 3000);
+    this.api.getTickets(filter, this.currentPage, this.pageSize, this.sortBy, this.sortDir).subscribe({
+      next: (res) => {
+        this.tickets       = res.data.content;
+        this.totalElements = res.data.totalElements;
+        this.totalPages    = res.data.totalPages;
+        this.loading       = false;
       },
       error: () => {
-        this.error = 'Failed to delete ticket.';
-        this.deleteLoading = null;
-        setTimeout(() => this.error = null, 3000);
+        this.toast.error('Failed to load tickets');
+        this.loading = false;
       }
     });
   }
 
-  goToPage(page: number): void {
-    if (page >= 0 && page < this.totalPages) {
-      this.currentPage = page;
-      this.loadTickets();
-    }
+  deleteTicket(id: number, ticketNumber: string) {
+    if (!confirm(`Delete ${ticketNumber}? This action cannot be undone.`)) return;
+    this.api.deleteTicket(id).subscribe({
+      next: () => { this.toast.success(`${ticketNumber} deleted`); this.loadTickets(); },
+      error: () => this.toast.error('Failed to delete ticket')
+    });
+  }
+
+  onPageChange(page: number) {
+    if (page < 0 || page >= this.totalPages) return;
+    this.currentPage = page;
+    this.loadTickets();
+  }
+
+  onSort(field: string) {
+    this.sortDir = this.sortBy === field ? (this.sortDir === 'asc' ? 'desc' : 'asc') : 'desc';
+    this.sortBy  = field;
+    this.loadTickets();
+  }
+
+  clearFilters() {
+    this.filterForm.reset({
+      ticketNumber: '', projectId: '', employeeId: '',
+      priority: '', currentStatus: '', supportLevel: ''
+    });
   }
 
   get pages(): number[] {
-    const range = [];
-    const start = Math.max(0, this.currentPage - 2);
-    const end = Math.min(this.totalPages - 1, this.currentPage + 2);
-    for (let i = start; i <= end; i++) range.push(i);
-    return range;
+    const total = this.totalPages;
+    const cur   = this.currentPage;
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i);
+    const pages: number[] = [0];
+    if (cur > 2) pages.push(-1);
+    for (let i = Math.max(1, cur - 1); i <= Math.min(total - 2, cur + 1); i++) pages.push(i);
+    if (cur < total - 3) pages.push(-1);
+    pages.push(total - 1);
+    return pages;
   }
 
-  getPriorityClass(priority: Priority): string {
-    const classes: Record<Priority, string> = {
-      P1_CRITICAL: 'priority-critical',
-      P2_HIGH: 'priority-high',
-      P3_MEDIUM: 'priority-medium',
-      P4_LOW: 'priority-low'
+  priorityClass(p?: string): string {
+    if (!p) return '';
+    if (p.startsWith('P1')) return 'badge-p1';
+    if (p.startsWith('P2')) return 'badge-p2';
+    if (p.startsWith('P3')) return 'badge-p3';
+    return 'badge-p4';
+  }
+
+  statusClass(s?: string): string {
+    const map: Record<string, string> = {
+      'Open': 'status-open', 'In Progress': 'status-progress',
+      'On Hold': 'status-hold', 'Resolved': 'status-resolved', 'Closed': 'status-closed'
     };
-    return classes[priority] || '';
+    return map[s ?? ''] ?? '';
   }
 
-  getStatusClass(status: CurrentStatus): string {
-    const classes: Record<CurrentStatus, string> = {
-      OPEN: 'status-open',
-      IN_PROGRESS: 'status-progress',
-      RESOLVED: 'status-resolved',
-      CLOSED: 'status-closed'
-    };
-    return classes[status] || '';
+  sortIcon(field: string): string {
+    if (this.sortBy !== field) return '↕';
+    return this.sortDir === 'asc' ? '↑' : '↓';
   }
 
-  constructor(private ticketService: TicketService) {}
+  truncate(text: string | undefined, len = 60): string {
+    if (!text) return '';
+    return text.length > len ? text.slice(0, len) + '…' : text;
+  }
 }

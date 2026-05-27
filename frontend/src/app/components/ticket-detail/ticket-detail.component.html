@@ -1,123 +1,120 @@
-<div class="detail-page">
+<div class="page-wrapper">
 
-  <!-- Header -->
-  <div class="page-header">
-    <a routerLink="/tickets" class="back-link">‹ Back to Tickets</a>
-    <div class="header-row" *ngIf="ticket">
-      <div class="page-title">
-        <span class="ticket-id-large">{{ ticket.ticketId }}</span>
-        <span class="status-badge" [ngClass]="getStatusClass(ticket.currentStatus)">
-          {{ statusLabels[ticket.currentStatus] }}
-        </span>
-        <span class="priority-badge" [ngClass]="getPriorityClass(ticket.priority)">
-          {{ priorityLabels[ticket.priority] }}
-        </span>
+  <div *ngIf="loading" class="spinner-wrap"><div class="spinner"></div></div>
+
+  <ng-container *ngIf="!loading && ticket">
+
+    <div class="page-header">
+      <div class="detail-title-row">
+        <span class="ticket-id-hero">{{ ticket.ticketNumber }}</span>
+        <span class="status-badge" [ngClass]="statusClass(ticket.currentStatus)">{{ ticket.currentStatus }}</span>
+        <span class="badge" [ngClass]="priorityClass(ticket.priority)" *ngIf="ticket.priority">{{ ticket.priority }}</span>
       </div>
       <div class="header-actions">
-        <a [routerLink]="['/tickets/edit', ticket.id]" class="btn-edit">✎ EDIT</a>
-        <button class="btn-delete" (click)="deleteTicket()" [disabled]="deleteLoading">
-          <span *ngIf="!deleteLoading">✕ DELETE</span>
-          <span *ngIf="deleteLoading">⋯</span>
+        <a [routerLink]="['/tickets/edit', ticket.id]" class="btn btn-primary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit Ticket
+        </a>
+        <button class="btn btn-danger" (click)="deleteTicket()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+          Delete
         </button>
+        <a routerLink="/tickets" class="btn btn-secondary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Back
+        </a>
       </div>
     </div>
-  </div>
 
-  <!-- Loading -->
-  <div class="loading-state" *ngIf="loading">
-    <div class="spinner"></div>
-    <span>Loading ticket details...</span>
-  </div>
+    <div class="detail-grid">
 
-  <!-- Error -->
-  <div class="alert alert-error" *ngIf="error">
-    <span>✕</span> {{ error }}
-  </div>
+      <!-- Issue -->
+      <div class="detail-card span-full">
+        <div class="card-label">Issue Description</div>
+        <p class="issue-body">{{ ticket.issueDescription }}</p>
+      </div>
 
-  <!-- Detail Card -->
-  <div class="detail-card" *ngIf="ticket && !loading">
-
-    <!-- Section: Core Details -->
-    <div class="detail-section">
-      <div class="section-label">CORE DETAILS</div>
-      <div class="detail-grid">
-        <div class="detail-field">
-          <div class="field-label">TICKET ID</div>
-          <div class="field-value field-mono highlight">{{ ticket.ticketId }}</div>
-        </div>
-        <div class="detail-field">
-          <div class="field-label">PROJECT ASSIGNMENT</div>
-          <div class="field-value">
-            <span class="project-tag">{{ ticket.projectAssignment }}</span>
+      <!-- Ticket Info -->
+      <div class="detail-card">
+        <div class="card-label">Ticket Information</div>
+        <div class="info-rows">
+          <div class="info-row">
+            <span class="info-key">Project</span>
+            <span class="info-val">{{ ticket.projectName || '—' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Assigned To</span>
+            <span class="info-val">
+              <span *ngIf="ticket.assignedEmployeeName" class="assignee">
+                <span class="avatar">{{ ticket.assignedEmployeeName.charAt(0) }}</span>
+                {{ ticket.assignedEmployeeName }}
+              </span>
+              <span *ngIf="!ticket.assignedEmployeeName" class="text-muted">Unassigned</span>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Support Level</span>
+            <span class="info-val">
+              <span class="level-tag" *ngIf="ticket.supportLevel">{{ ticket.supportLevel }}</span>
+              <span class="text-muted" *ngIf="!ticket.supportLevel">—</span>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Priority</span>
+            <span class="info-val">
+              <span class="badge" [ngClass]="priorityClass(ticket.priority)" *ngIf="ticket.priority">{{ ticket.priority }}</span>
+              <span class="text-muted" *ngIf="!ticket.priority">—</span>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Status</span>
+            <span class="info-val">
+              <span class="status-badge" [ngClass]="statusClass(ticket.currentStatus)">{{ ticket.currentStatus }}</span>
+            </span>
           </div>
         </div>
-        <div class="detail-field">
-          <div class="field-label">ASSIGNED EMPLOYEE</div>
-          <div class="field-value">{{ ticket.assignedEmployee || '— Not Assigned —' }}</div>
-        </div>
-        <div class="detail-field">
-          <div class="field-label">SUPPORT LEVEL</div>
-          <div class="field-value">
-            <span class="level-badge">{{ ticket.supportLevel }}</span>
+      </div>
+
+      <!-- Timeline -->
+      <div class="detail-card">
+        <div class="card-label">Timeline</div>
+        <div class="info-rows">
+          <div class="info-row">
+            <span class="info-key">Generated</span>
+            <span class="info-val mono">{{ (ticket.generationDatetime | date:'dd MMM yyyy, HH:mm') || '—' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Response Time</span>
+            <span class="info-val mono">{{ (ticket.responseDatetime | date:'dd MMM yyyy, HH:mm') || 'Pending' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Resolution Time</span>
+            <span class="info-val" [class.resolution-time]="ticket.resolutionTime">{{ ticket.resolutionTime || 'In progress' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Created At</span>
+            <span class="info-val mono">{{ (ticket.createdAt | date:'dd MMM yyyy, HH:mm') || '—' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Last Updated</span>
+            <span class="info-val mono">{{ (ticket.updatedAt | date:'dd MMM yyyy, HH:mm') || '—' }}</span>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Section: Issue Description -->
-    <div class="detail-section">
-      <div class="section-label">ISSUE DESCRIPTION</div>
-      <div class="detail-text-block">{{ ticket.issueDescription }}</div>
-    </div>
-
-    <!-- Section: Timeline -->
-    <div class="detail-section">
-      <div class="section-label">TIMELINE</div>
-      <div class="timeline-grid">
-        <div class="timeline-item">
-          <div class="tl-label">Generation Date/Time</div>
-          <div class="tl-value">{{ (ticket.generationDateTime | date:'dd MMM yyyy, HH:mm') || '—' }}</div>
-        </div>
-        <div class="timeline-arrow">→</div>
-        <div class="timeline-item">
-          <div class="tl-label">Response Date/Time</div>
-          <div class="tl-value">{{ (ticket.responseDateTime | date:'dd MMM yyyy, HH:mm') || '—' }}</div>
-        </div>
-        <div class="timeline-arrow">→</div>
-        <div class="timeline-item">
-          <div class="tl-label">Resolution Time</div>
-          <div class="tl-value">{{ (ticket.resolutionTime | date:'dd MMM yyyy, HH:mm') || '—' }}</div>
-        </div>
+      <!-- Resolution -->
+      <div class="detail-card span-full" *ngIf="ticket.resolutionDetails">
+        <div class="card-label">Resolution Details</div>
+        <p class="body-text success-text">{{ ticket.resolutionDetails }}</p>
       </div>
-    </div>
 
-    <!-- Section: Resolution Details -->
-    <div class="detail-section" *ngIf="ticket.resolutionDetails">
-      <div class="section-label">RESOLUTION DETAILS</div>
-      <div class="detail-text-block resolved">{{ ticket.resolutionDetails }}</div>
-    </div>
-
-    <!-- Section: Remarks -->
-    <div class="detail-section" *ngIf="ticket.remarks">
-      <div class="section-label">REMARKS</div>
-      <div class="detail-text-block remarks">{{ ticket.remarks }}</div>
-    </div>
-
-    <!-- Section: Audit -->
-    <div class="detail-section">
-      <div class="section-label">AUDIT INFO</div>
-      <div class="detail-grid">
-        <div class="detail-field">
-          <div class="field-label">CREATED AT</div>
-          <div class="field-value field-mono dim">{{ ticket.createdAt | date:'dd MMM yyyy, HH:mm:ss' }}</div>
-        </div>
-        <div class="detail-field">
-          <div class="field-label">LAST UPDATED</div>
-          <div class="field-value field-mono dim">{{ ticket.updatedAt | date:'dd MMM yyyy, HH:mm:ss' }}</div>
-        </div>
+      <!-- Remarks -->
+      <div class="detail-card span-full" *ngIf="ticket.remarks">
+        <div class="card-label">Remarks</div>
+        <p class="body-text">{{ ticket.remarks }}</p>
       </div>
-    </div>
 
-  </div>
+    </div>
+  </ng-container>
 
 </div>

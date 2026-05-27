@@ -1,0 +1,2 @@
+.project-name-cell { display: flex; align-items: center; gap: 10px; font-weight: 500; }
+.project-icon { width: 28px; height: 28px; border-radius: 6px; background: var(--accent-light); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
