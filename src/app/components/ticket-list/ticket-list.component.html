@@ -1,0 +1,172 @@
+<div class="list-page">
+
+  <!-- Dashboard Stats -->
+  <div class="stats-grid" *ngIf="dashboardStats">
+    <div class="stat-card stat-total">
+      <div class="stat-value">{{ dashboardStats.totalTickets }}</div>
+      <div class="stat-label">Total Tickets</div>
+      <div class="stat-bar"></div>
+    </div>
+    <div class="stat-card stat-open">
+      <div class="stat-value">{{ dashboardStats.openTickets }}</div>
+      <div class="stat-label">Open</div>
+    </div>
+    <div class="stat-card stat-progress">
+      <div class="stat-value">{{ dashboardStats.inProgressTickets }}</div>
+      <div class="stat-label">In Progress</div>
+    </div>
+    <div class="stat-card stat-resolved">
+      <div class="stat-value">{{ dashboardStats.resolvedTickets }}</div>
+      <div class="stat-label">Resolved</div>
+    </div>
+    <div class="stat-card stat-closed">
+      <div class="stat-value">{{ dashboardStats.closedTickets }}</div>
+      <div class="stat-label">Closed</div>
+    </div>
+  </div>
+
+  <!-- Header Row -->
+  <div class="list-header">
+    <div class="list-title">
+      <span class="title-accent">■</span>
+      INCIDENT TICKETS
+      <span class="ticket-count">{{ totalElements }} records</span>
+    </div>
+    <a routerLink="/tickets/new" class="btn-create">
+      <span>＋</span> CREATE TICKET
+    </a>
+  </div>
+
+  <!-- Alerts -->
+  <div class="alert alert-success" *ngIf="successMessage">
+    <span>✓</span> {{ successMessage }}
+  </div>
+  <div class="alert alert-error" *ngIf="error">
+    <span>✕</span> {{ error }}
+  </div>
+
+  <!-- Search & Filter Bar -->
+  <div class="filter-bar">
+    <div class="search-box">
+      <span class="search-icon">⌕</span>
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Search by ticket ID or keyword..."
+        [(ngModel)]="searchQuery"
+        (ngModelChange)="onSearchChange()"
+      />
+    </div>
+    <select class="filter-select" [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()">
+      <option *ngFor="let opt of statusOptions" [value]="opt.value">{{ opt.label }}</option>
+    </select>
+    <select class="filter-select" [(ngModel)]="filterPriority" (ngModelChange)="onFilterChange()">
+      <option *ngFor="let opt of priorityOptions" [value]="opt.value">{{ opt.label }}</option>
+    </select>
+    <input
+      type="text"
+      class="filter-input"
+      placeholder="Filter by project..."
+      [(ngModel)]="filterProject"
+      (ngModelChange)="onFilterChange()"
+    />
+    <button class="btn-clear" (click)="clearFilters()" title="Clear all filters">✕ Clear</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-container">
+    <div class="loading-overlay" *ngIf="loading">
+      <div class="spinner"></div>
+      <span>Loading tickets...</span>
+    </div>
+
+    <table class="ticket-table" *ngIf="!loading">
+      <thead>
+        <tr>
+          <th>TICKET ID</th>
+          <th>PROJECT</th>
+          <th>DESCRIPTION</th>
+          <th>ASSIGNED TO</th>
+          <th>LEVEL</th>
+          <th>PRIORITY</th>
+          <th>STATUS</th>
+          <th>CREATED</th>
+          <th>SLA</th>
+          <th>ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let ticket of tickets" class="ticket-row">
+          <td>
+            <span class="ticket-id-badge">{{ ticket.ticketId }}</span>
+          </td>
+          <td>
+            <span class="project-tag">{{ ticket.projectAssignment }}</span>
+          </td>
+          <td>
+            <span class="description-text" [title]="ticket.issueDescription">
+              {{ ticket.issueDescription | slice:0:60 }}{{ ticket.issueDescription && ticket.issueDescription.length > 60 ? '...' : '' }}
+            </span>
+          </td>
+          <td>
+            <span class="assignee">{{ ticket.assignedEmployee || '—' }}</span>
+          </td>
+          <td>
+            <span class="level-badge">{{ ticket.supportLevel }}</span>
+          </td>
+          <td>
+            <span class="priority-badge" [ngClass]="getPriorityClass(ticket.priority)">
+              {{ priorityLabels[ticket.priority] }}
+            </span>
+          </td>
+          <td>
+            <span class="status-badge" [ngClass]="getStatusClass(ticket.currentStatus)">
+              {{ statusLabels[ticket.currentStatus] }}
+            </span>
+          </td>
+          <td>
+            <span class="date-text">{{ ticket.createdAt | date:'dd MMM yy, HH:mm' }}</span>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <a [routerLink]="['/tickets/view', ticket.id]" class="btn-action btn-view" title="View">👁</a>
+              <a [routerLink]="['/tickets/edit', ticket.id]" class="btn-action btn-edit" title="Edit">✎</a>
+              <button
+                class="btn-action btn-delete"
+                (click)="deleteTicket(ticket.id!)"
+                [disabled]="deleteLoading === ticket.id"
+                title="Delete"
+              >
+                <span *ngIf="deleteLoading !== ticket.id">✕</span>
+                <span *ngIf="deleteLoading === ticket.id">⋯</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="tickets.length === 0 && !loading">
+          <td colspan="9" class="empty-state">
+            <div class="empty-icon">▣</div>
+            <div>No tickets found</div>
+            <div class="empty-sub">Try adjusting your filters or <a routerLink="/tickets/new">create a new ticket</a></div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" *ngIf="totalPages > 1">
+    <button class="page-btn" (click)="goToPage(0)" [disabled]="currentPage === 0">«</button>
+    <button class="page-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0">‹</button>
+    <button
+      *ngFor="let p of pages"
+      class="page-btn"
+      [class.active]="p === currentPage"
+      (click)="goToPage(p)"
+    >{{ p + 1 }}</button>
+    <button class="page-btn" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages - 1">›</button>
+    <button class="page-btn" (click)="goToPage(totalPages - 1)" [disabled]="currentPage === totalPages - 1">»</button>
+    <span class="page-info">Page {{ currentPage + 1 }} of {{ totalPages }} · {{ totalElements }} total</span>
+  </div>
+
+</div>

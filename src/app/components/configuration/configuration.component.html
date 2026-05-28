@@ -1,0 +1,319 @@
+<div class="config-page">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="page-title">
+      <span class="title-mark">⚙</span> CONFIGURATION
+    </div>
+    <div class="page-subtitle">Master settings — Projects · Employees · Shifts · SLA · Holidays</div>
+  </div>
+
+  <!-- Alerts -->
+  <div class="alert alert-success" *ngIf="successMessage"><span>✓</span> {{ successMessage }}</div>
+  <div class="alert alert-error"   *ngIf="error"><span>✕</span> {{ error }}</div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <button class="tab-btn" [class.active]="activeTab==='projects'"  (click)="setTab('projects')">
+      <span class="tab-icon">◈</span> Projects
+    </button>
+    <button class="tab-btn" [class.active]="activeTab==='employees'" (click)="setTab('employees')">
+      <span class="tab-icon">◉</span> Employees
+    </button>
+    <button class="tab-btn" [class.active]="activeTab==='shifts'"    (click)="setTab('shifts')">
+      <span class="tab-icon">⏱</span> Shift Hours
+    </button>
+    <button class="tab-btn" [class.active]="activeTab==='sla'"       (click)="setTab('sla')">
+      <span class="tab-icon">◎</span> SLA
+    </button>
+    <button class="tab-btn" [class.active]="activeTab==='holidays'"  (click)="setTab('holidays')">
+      <span class="tab-icon">◆</span> Holidays
+    </button>
+  </div>
+
+  <!-- ════════════ PROJECTS TAB ════════════ -->
+  <div *ngIf="activeTab==='projects'" class="tab-panel">
+    <div class="panel-actions">
+      <a routerLink="/projects/new" class="btn btn-primary">＋ New Project</a>
+    </div>
+
+    <div class="loading-state" *ngIf="projectsLoading"><div class="spinner"></div><span>Loading...</span></div>
+
+    <div class="data-table-wrap" *ngIf="!projectsLoading">
+      <table class="data-table" *ngIf="projects.length > 0">
+        <thead>
+          <tr>
+            <th>CODE</th><th>NAME</th><th>STATUS</th><th>START</th><th>END</th><th>ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of projects">
+            <td><span class="badge badge-code">{{ p.projectCode }}</span></td>
+            <td>{{ p.projectName }}</td>
+            <td><span class="status-badge" [class]="'status-' + p.status.toLowerCase()">{{ p.status }}</span></td>
+            <td>{{ p.startDate || '—' }}</td>
+            <td>{{ p.endDate   || '—' }}</td>
+            <td class="action-cell">
+              <a [routerLink]="['/projects/edit', p.id]" class="btn-icon" title="Edit">✎</a>
+              <button class="btn-icon btn-danger" (click)="deleteProject(p.id!)" title="Delete">✕</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="empty-state" *ngIf="projects.length === 0">
+        <span class="empty-icon">◈</span>
+        <p>No projects yet. <a routerLink="/projects/new">Create one</a>.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ EMPLOYEES TAB ════════════ -->
+  <div *ngIf="activeTab==='employees'" class="tab-panel">
+    <div class="panel-actions">
+      <div class="search-row">
+        <input class="form-control search-input" placeholder="Search name / email / username..."
+               [(ngModel)]="employeeSearch" (input)="loadEmployees()" [ngModelOptions]="{standalone: true}" />
+        <select class="form-control select-sm" [(ngModel)]="employeeStatusFilter"
+                (change)="loadEmployees()" [ngModelOptions]="{standalone: true}">
+          <option value="">All Statuses</option>
+          <option value="ACTIVE">Active</option>
+          <option value="INACTIVE">Inactive</option>
+          <option value="ON_LEAVE">On Leave</option>
+        </select>
+      </div>
+      <a routerLink="/employees/new" class="btn btn-primary">＋ New Employee</a>
+    </div>
+
+    <div class="loading-state" *ngIf="employeesLoading"><div class="spinner"></div><span>Loading...</span></div>
+
+    <div class="data-table-wrap" *ngIf="!employeesLoading">
+      <table class="data-table" *ngIf="employees.length > 0">
+        <thead>
+          <tr>
+            <th>NAME</th><th>USERNAME</th><th>EMAIL</th><th>ROLE</th>
+            <th>DEPARTMENT</th><th>PROJECTS</th><th>STATUS</th><th>ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let e of employees">
+            <td>{{ e.employeeName }}</td>
+            <td><code>{{ e.username }}</code></td>
+            <td>{{ e.email }}</td>
+            <td><span class="role-badge role-{{ e.role.toLowerCase() }}">{{ e.role }}</span></td>
+            <td>{{ e.department || '—' }}</td>
+            <td>
+              <span *ngFor="let p of e.projects" class="badge badge-code" style="margin-right:2px">{{ p.projectCode }}</span>
+              <span *ngIf="!e.projects?.length">—</span>
+            </td>
+            <td><span class="status-badge" [class]="'status-' + e.status.toLowerCase()">{{ e.status }}</span></td>
+            <td class="action-cell">
+              <a [routerLink]="['/employees/edit', e.id]" class="btn-icon" title="Edit">✎</a>
+              <button class="btn-icon btn-danger" (click)="deleteEmployee(e.id!)" title="Delete">✕</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="empty-state" *ngIf="employees.length === 0">
+        <span class="empty-icon">◉</span>
+        <p>No employees found. <a routerLink="/employees/new">Add one</a>.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ SHIFT HOURS TAB ════════════ -->
+  <div *ngIf="activeTab==='shifts'" class="tab-panel">
+    <div class="panel-actions">
+      <button class="btn btn-primary" (click)="openShiftForm()">＋ Add Shift</button>
+    </div>
+
+    <!-- Inline form -->
+    <div class="inline-form-card" *ngIf="showShiftForm" [formGroup]="shiftForm">
+      <div class="inline-form-title">{{ editingShiftId ? '✎ Edit Shift' : '＋ New Shift' }}</div>
+      <div class="form-grid form-grid-3">
+        <div class="form-group">
+          <label class="form-label required">SHIFT NAME</label>
+          <input class="form-control" formControlName="shiftName" placeholder="e.g. Morning Shift" />
+        </div>
+        <div class="form-group">
+          <label class="form-label required">START TIME</label>
+          <input type="time" class="form-control" formControlName="startTime" />
+        </div>
+        <div class="form-group">
+          <label class="form-label required">END TIME</label>
+          <input type="time" class="form-control" formControlName="endTime" />
+        </div>
+      </div>
+      <div class="form-group toggle-group">
+        <label class="form-label">ACTIVE</label>
+        <label class="toggle-switch">
+          <input type="checkbox" formControlName="isActive" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="inline-form-actions">
+        <button class="btn btn-ghost"    (click)="cancelShiftForm()">Cancel</button>
+        <button class="btn btn-primary"  (click)="saveShift()">Save</button>
+      </div>
+    </div>
+
+    <div class="loading-state" *ngIf="shiftsLoading"><div class="spinner"></div><span>Loading...</span></div>
+
+    <div class="data-table-wrap" *ngIf="!shiftsLoading">
+      <table class="data-table" *ngIf="shifts.length > 0">
+        <thead>
+          <tr><th>NAME</th><th>START</th><th>END</th><th>ACTIVE</th><th>ACTIONS</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of shifts">
+            <td>{{ s.shiftName }}</td>
+            <td>{{ s.startTime }}</td>
+            <td>{{ s.endTime }}</td>
+            <td><span class="status-badge" [class]="s.isActive ? 'status-active' : 'status-inactive'">{{ s.isActive ? 'Yes' : 'No' }}</span></td>
+            <td class="action-cell">
+              <button class="btn-icon" (click)="openShiftForm(s)" title="Edit">✎</button>
+              <button class="btn-icon btn-danger" (click)="deleteShift(s.id!)" title="Delete">✕</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="empty-state" *ngIf="shifts.length === 0">
+        <span class="empty-icon">⏱</span>
+        <p>No shift hours configured.</p>
+        <div class="hint-box">Shift hours define working time used in SLA calculations.<br>Weekends &amp; holidays are always excluded automatically.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ SLA TAB ════════════ -->
+  <div *ngIf="activeTab==='sla'" class="tab-panel">
+    <div class="panel-actions">
+      <button class="btn btn-primary" (click)="openSlaForm()">＋ Add SLA Rule</button>
+    </div>
+    <div class="hint-box sla-hint">
+      SLA timers count only working hours within configured shift windows.<br>
+      <strong>Saturdays, Sundays</strong> and all <strong>configured holidays</strong> are automatically excluded.
+    </div>
+
+    <!-- Inline form -->
+    <div class="inline-form-card" *ngIf="showSlaForm" [formGroup]="slaForm">
+      <div class="inline-form-title">{{ editingSlaId ? '✎ Edit SLA Rule' : '＋ New SLA Rule' }}</div>
+      <div class="form-grid form-grid-2">
+        <div class="form-group">
+          <label class="form-label required">PRIORITY</label>
+          <select class="form-control" formControlName="priority">
+            <option *ngFor="let p of slaAllPriorities" [value]="p">{{ priorityLabel(p) }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label required">SUPPORT LEVEL</label>
+          <select class="form-control" formControlName="supportLevel">
+            <option *ngFor="let l of slaSupportLevels" [value]="l">{{ l }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label required">RESPONSE TIME (hrs)</label>
+          <input type="number" class="form-control" formControlName="responseTimeHours" min="0.1" step="0.5" />
+        </div>
+        <div class="form-group">
+          <label class="form-label required">RESOLUTION TIME (hrs)</label>
+          <input type="number" class="form-control" formControlName="resolutionTimeHours" min="0.1" step="0.5" />
+        </div>
+      </div>
+      <div class="form-group toggle-group">
+        <label class="form-label">ACTIVE</label>
+        <label class="toggle-switch">
+          <input type="checkbox" formControlName="isActive" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="inline-form-actions">
+        <button class="btn btn-ghost"   (click)="cancelSlaForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveSla()">Save</button>
+      </div>
+    </div>
+
+    <div class="loading-state" *ngIf="slaLoading"><div class="spinner"></div><span>Loading...</span></div>
+
+    <div class="data-table-wrap" *ngIf="!slaLoading">
+      <table class="data-table" *ngIf="slaConfigs.length > 0">
+        <thead>
+          <tr><th>PRIORITY</th><th>LEVEL</th><th>RESPONSE (hrs)</th><th>RESOLUTION (hrs)</th><th>ACTIVE</th><th>ACTIONS</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of slaConfigs">
+            <td><span class="badge badge-priority badge-{{ c.priority.toLowerCase().replace('_','-') }}">{{ c.priority }}</span></td>
+            <td>{{ c.supportLevel }}</td>
+            <td>{{ c.responseTimeHours }}</td>
+            <td>{{ c.resolutionTimeHours }}</td>
+            <td><span class="status-badge" [class]="c.isActive ? 'status-active' : 'status-inactive'">{{ c.isActive ? 'Yes' : 'No' }}</span></td>
+            <td class="action-cell">
+              <button class="btn-icon" (click)="openSlaForm(c)" title="Edit">✎</button>
+              <button class="btn-icon btn-danger" (click)="deleteSla(c.id!)" title="Delete">✕</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="empty-state" *ngIf="slaConfigs.length === 0">
+        <span class="empty-icon">◎</span>
+        <p>No SLA rules defined yet.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ HOLIDAYS TAB ════════════ -->
+  <div *ngIf="activeTab==='holidays'" class="tab-panel">
+    <div class="panel-actions">
+      <button class="btn btn-primary" (click)="openHolidayForm()">＋ Add Holiday</button>
+    </div>
+    <div class="hint-box">Saturday &amp; Sunday are automatically treated as non-working days in SLA calculations.</div>
+
+    <!-- Inline form -->
+    <div class="inline-form-card" *ngIf="showHolidayForm" [formGroup]="holidayForm">
+      <div class="inline-form-title">{{ editingHolidayId ? '✎ Edit Holiday' : '＋ New Holiday' }}</div>
+      <div class="form-grid form-grid-2">
+        <div class="form-group">
+          <label class="form-label required">HOLIDAY NAME</label>
+          <input class="form-control" formControlName="holidayName" placeholder="e.g. Republic Day" />
+        </div>
+        <div class="form-group">
+          <label class="form-label required">DATE</label>
+          <input type="date" class="form-control" formControlName="holidayDate" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">DESCRIPTION</label>
+        <input class="form-control" formControlName="description" placeholder="Optional notes" />
+      </div>
+      <div class="inline-form-actions">
+        <button class="btn btn-ghost"   (click)="cancelHolidayForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveHoliday()">Save</button>
+      </div>
+    </div>
+
+    <div class="loading-state" *ngIf="holidaysLoading"><div class="spinner"></div><span>Loading...</span></div>
+
+    <div class="data-table-wrap" *ngIf="!holidaysLoading">
+      <table class="data-table" *ngIf="holidays.length > 0">
+        <thead>
+          <tr><th>NAME</th><th>DATE</th><th>DESCRIPTION</th><th>ACTIONS</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let h of holidays">
+            <td>{{ h.holidayName }}</td>
+            <td>{{ h.holidayDate }}</td>
+            <td>{{ h.description || '—' }}</td>
+            <td class="action-cell">
+              <button class="btn-icon" (click)="openHolidayForm(h)" title="Edit">✎</button>
+              <button class="btn-icon btn-danger" (click)="deleteHoliday(h.id!)" title="Delete">✕</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="empty-state" *ngIf="holidays.length === 0">
+        <span class="empty-icon">◆</span>
+        <p>No holidays configured.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
