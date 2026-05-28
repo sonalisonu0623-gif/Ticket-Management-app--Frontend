@@ -2,24 +2,24 @@ import { Injectable, signal } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
-  private _theme = signal<'dark' | 'light'>('dark');
-  theme = this._theme.asReadonly();
+  private readonly THEME_KEY = 'nexus-theme';
+  isDark = signal<boolean>(true);
 
   constructor() {
-    const saved = localStorage.getItem('ticketops-theme') as 'dark' | 'light' | null;
-    const initial = saved || 'dark';
-    this._theme.set(initial);
-    document.documentElement.setAttribute('data-theme', initial);
+    const saved = localStorage.getItem(this.THEME_KEY);
+    const dark = saved !== null ? saved === 'dark' : true;
+    this.isDark.set(dark);
+    this.applyTheme(dark);
   }
 
-  toggle() {
-    const next = this._theme() === 'dark' ? 'light' : 'dark';
-    this._theme.set(next);
-    localStorage.setItem('ticketops-theme', next);
-    document.documentElement.setAttribute('data-theme', next);
+  toggle(): void {
+    const next = !this.isDark();
+    this.isDark.set(next);
+    localStorage.setItem(this.THEME_KEY, next ? 'dark' : 'light');
+    this.applyTheme(next);
   }
 
-  isDark() {
-    return this._theme() === 'dark';
+  private applyTheme(dark: boolean): void {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
   }
 }

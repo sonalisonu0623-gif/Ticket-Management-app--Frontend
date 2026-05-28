@@ -1,4 +1,4 @@
 export const environment = {
   production: false,
-  apiBaseUrl: 'http://localhost:8080/api'
+  apiUrl: 'https://ticket-management-app-backend-1x7b.onrender.com/api'
 };

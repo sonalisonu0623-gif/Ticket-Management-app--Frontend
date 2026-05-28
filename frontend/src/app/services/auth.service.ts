@@ -1,78 +1,129 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap, catchError, throwError } from 'rxjs';
+import { Observable, tap, map } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { ApiResponse } from '../models/models';
-import { AuthStateResponse, UserSessionData } from '../models/auth.models';
+import { AuthResponse, LoginRequest, RegisterRequest, UserProfile, UserRole } from '../models/auth.model';
+
+interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
+
+const TOKEN_KEY = 'nexus_jwt_token';
+const USER_KEY  = 'nexus_user';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly authUrl = `${environment.apiBaseUrl}/auth`;
-  private readonly TOKEN_KEY = 'ticketops_auth_token';
-  private readonly USER_KEY = 'ticketops_user_data';
+  private apiUrl = `${environment.apiUrl}/auth`;
 
-  // Core state management utilizing Angular Signals
-  private _currentUser = signal<UserSessionData | null>(null);
+  // Reactive state
   private _token = signal<string | null>(null);
+  private _user   = signal<AuthResponse | null>(null);
 
-  currentUser = this._currentUser.asReadonly();
-  token = this._token.asReadonly();
-  isAuthenticated = computed(() => !!this._token());
-  isAdmin = computed(() => this._currentUser()?.role === 'ADMIN');
+  readonly isAuthenticated = computed(() => !!this._token());
+  readonly currentUser     = computed(() => this._user());
+  readonly userRole         = computed(() => this._user()?.role ?? null);
 
   constructor(private http: HttpClient, private router: Router) {
-    this.hydrateSession();
+    this.restoreSession();
   }
 
-  private hydrateSession() {
-    const savedToken = localStorage.getItem(this.TOKEN_KEY);
-    const savedUser = localStorage.getItem(this.USER_KEY);
+  // ── Public API ────────────────────────────────────────────────────────────
 
-    if (savedToken && savedUser) {
-      this._token.set(savedToken);
-      this._currentUser.set(JSON.parse(savedUser));
-    }
-  }
-
-  login(payload: any): Observable<ApiResponse<AuthStateResponse>> {
-    return this.http.post<ApiResponse<AuthStateResponse>>(`${this.authUrl}/login`, payload).pipe(
-      // Explicitly giving 'res' its explicit type definition here clears the 'unknown' error instantly
-      tap((res: ApiResponse<AuthStateResponse>) => {
-        if (res.success && res.data) {
-          this.establishSession(res.data.token, res.data.user);
-        }
-      })
+  login(request: LoginRequest): Observable<AuthResponse> {
+    return this.http.post<ApiResponse<AuthResponse>>(`${this.apiUrl}/login`, request).pipe(
+      map(res => {
+        if (!res.success) throw new Error(res.message);
+        return res.data;
+      }),
+      tap(data => this.saveSession(data))
     );
   }
 
-  register(payload: any): Observable<ApiResponse<any>> {
-    return this.http.post<ApiResponse<any>>(`${this.authUrl}/register`, payload);
+  register(request: RegisterRequest): Observable<AuthResponse> {
+    return this.http.post<ApiResponse<AuthResponse>>(`${this.apiUrl}/register`, request).pipe(
+      map(res => {
+        if (!res.success) throw new Error(res.message);
+        return res.data;
+      }),
+      tap(data => this.saveSession(data))
+    );
   }
 
-  private establishSession(jwt: string, profile: UserSessionData) {
-    localStorage.setItem(this.TOKEN_KEY, jwt);
-    localStorage.setItem(this.USER_KEY, JSON.stringify(profile));
-    this._token.set(jwt);
-    this._currentUser.set(profile);
+  getProfile(): Observable<UserProfile> {
+    return this.http.get<ApiResponse<UserProfile>>(`${this.apiUrl}/me`).pipe(
+      map(res => res.data)
+    );
   }
 
-  logout() {
-    localStorage.removeItem(this.TOKEN_KEY);
-    localStorage.removeItem(this.USER_KEY);
+  logout(): void {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
     this._token.set(null);
-    this._currentUser.set(null);
+    this._user.set(null);
     this.router.navigate(['/login']);
   }
 
-  checkTokenValidity(): Observable<any> {
-    return this.http.get<ApiResponse<any>>(`${this.authUrl}/me`).pipe(
-      catchError(err => {
-        if (err.status === 401) {
-          this.logout();
+  getToken(): string | null {
+    return this._token();
+  }
+
+  // ── Role helpers ──────────────────────────────────────────────────────────
+
+  isAdmin(): boolean { return this._user()?.role === 'ADMIN'; }
+  isProjectManager(): boolean { return this._user()?.role === 'PROJECT_MANAGER'; }
+  isEmployee(): boolean { return this._user()?.role === 'EMPLOYEE'; }
+
+  hasRole(...roles: UserRole[]): boolean {
+    const role = this._user()?.role;
+    return role ? roles.includes(role) : false;
+  }
+
+  canManageProjects(): boolean { return this.hasRole('ADMIN', 'PROJECT_MANAGER'); }
+  canManageEmployees(): boolean { return this.hasRole('ADMIN'); }
+  canDeleteTickets(): boolean { return this.hasRole('ADMIN', 'PROJECT_MANAGER'); }
+  canCreateTickets(): boolean { return this.hasRole('ADMIN', 'PROJECT_MANAGER'); }
+
+  // ── Session persistence ───────────────────────────────────────────────────
+
+  private saveSession(data: AuthResponse): void {
+    localStorage.setItem(TOKEN_KEY, data.token);
+    localStorage.setItem(USER_KEY, JSON.stringify(data));
+    this._token.set(data.token);
+    this._user.set(data);
+  }
+
+  private restoreSession(): void {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const userJson = localStorage.getItem(USER_KEY);
+    if (token && userJson) {
+      try {
+        const user: AuthResponse = JSON.parse(userJson);
+        if (!this.isTokenExpired(token)) {
+          this._token.set(token);
+          this._user.set(user);
+        } else {
+          this.clearSession();
         }
-        return throwError(() => err);
-      })
-    );
+      } catch {
+        this.clearSession();
+      }
+    }
+  }
+
+  private clearSession(): void {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  }
+
+  private isTokenExpired(token: string): boolean {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.exp * 1000 < Date.now();
+    } catch {
+      return true;
+    }
   }
 }

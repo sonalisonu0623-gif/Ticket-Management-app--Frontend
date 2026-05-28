@@ -1,30 +1,38 @@
-import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
-import { inject } from '@angular/core';
-import { catchError, throwError } from 'rxjs';
+import { Injectable } from '@angular/core';
+import {
+  HttpRequest,
+  HttpHandler,
+  HttpEvent,
+  HttpInterceptor,
+  HttpErrorResponse
+} from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { AuthService } from '../services/auth.service';
-import { ToastService } from '../services/toast.service';
+import { Router } from '@angular/router';
 
-export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
-  const authService = inject(AuthService);
-  const toast = inject(ToastService);
-  const token = authService.token();
+@Injectable()
+export class JwtInterceptor implements HttpInterceptor {
 
-  let clonedRequest = req;
-  if (token) {
-    clonedRequest = req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`
-      }
-    });
+  constructor(private authService: AuthService, private router: Router) {}
+
+  intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
+    const token = this.authService.getToken();
+
+    if (token) {
+      request = request.clone({
+        setHeaders: { Authorization: `Bearer ${token}` }
+      });
+    }
+
+    return next.handle(request).pipe(
+      catchError((error: HttpErrorResponse) => {
+        if (error.status === 401) {
+          // Token expired or invalid — log out and redirect
+          this.authService.logout();
+        }
+        return throwError(() => error);
+      })
+    );
   }
-
-  return next(clonedRequest).pipe(
-    catchError((error: HttpErrorResponse) => {
-      if (error.status === 401) {
-        toast.error('Session expired or unauthorized access attempt.');
-        authService.logout();
-      }
-      return throwError(() => error);
-    })
-  );
-};
+}

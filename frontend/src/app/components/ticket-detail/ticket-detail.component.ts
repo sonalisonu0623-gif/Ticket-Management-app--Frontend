@@ -1,57 +1,76 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, ActivatedRoute, Router } from '@angular/router';
-import { SpinnerComponent } from '../shared/spinner.component';
-import { ApiService } from '../../services/api.service';
-import { ToastService } from '../../services/toast.service';
-import { Ticket } from '../../models/models';
+import { RouterLink, ActivatedRoute, Router } from '@angular/router';
+import { TicketService } from '../../services/ticket.service';
+import { AuthService }   from '../../services/auth.service';
+import { Ticket, PRIORITY_LABELS, STATUS_LABELS } from '../../models/ticket.model';
 
 @Component({
   selector: 'app-ticket-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, SpinnerComponent],
+  imports: [CommonModule, RouterLink],
   templateUrl: './ticket-detail.component.html',
+  styleUrls: ['./ticket-detail.component.css']
 })
 export class TicketDetailComponent implements OnInit {
-  ticket?: Ticket;
-  loading = true;
+  ticket: Ticket | null = null;
+  loading = false;
+  error: string | null = null;
+  deleteLoading = false;
+
+  priorityLabels = PRIORITY_LABELS;
+  statusLabels   = STATUS_LABELS;
 
   constructor(
-    private api: ApiService,
-    private toast: ToastService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private ticketService: TicketService,
+    public authService: AuthService
   ) {}
 
-  ngOnInit() {
-    const id = +this.route.snapshot.params['id'];
-    this.api.getTicketById(id).subscribe({
-      next:  (t) => { this.ticket = t; this.loading = false; },
-      error: ()  => { this.toast.error('Ticket not found'); this.router.navigate(['/tickets']); }
+  /** EMPLOYEE = read-only, no edit / delete buttons */
+  get isReadOnly(): boolean { return this.authService.isEmployee(); }
+  get canDelete():  boolean { return this.authService.isAdmin(); }
+
+  ngOnInit(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) this.loadTicket(Number(id));
+  }
+
+  loadTicket(id: number): void {
+    this.loading = true;
+    this.ticketService.getTicketById(id).subscribe({
+      next: t => { this.ticket = t; this.loading = false; },
+      error: () => { this.error = 'Ticket not found.'; this.loading = false; }
     });
   }
 
-  deleteTicket() {
-    if (!confirm(`Delete ticket ${this.ticket?.ticketNumber}? This cannot be undone.`)) return;
-    this.api.deleteTicket(this.ticket!.id!).subscribe({
-      next:  () => { this.toast.success('Ticket deleted'); this.router.navigate(['/tickets']); },
-      error: ()  => this.toast.error('Failed to delete ticket')
+  deleteTicket(): void {
+    if (!this.ticket?.id || !confirm('Delete this ticket?')) return;
+    this.deleteLoading = true;
+    this.ticketService.deleteTicket(this.ticket.id).subscribe({
+      next: () => this.router.navigate(['/tickets']),
+      error: () => { this.error = 'Delete failed.'; this.deleteLoading = false; }
     });
   }
 
-  priorityClass(p?: string): string {
-    if (!p) return '';
-    if (p.startsWith('P1')) return 'badge-p1';
-    if (p.startsWith('P2')) return 'badge-p2';
-    if (p.startsWith('P3')) return 'badge-p3';
-    return 'badge-p4';
+  back(): void {
+    if (this.authService.isEmployee()) this.router.navigate(['/my-tickets']);
+    else this.router.navigate(['/tickets']);
   }
 
-  statusClass(s?: string): string {
-    const map: Record<string, string> = {
-      'Open': 'status-open', 'In Progress': 'status-progress',
-      'On Hold': 'status-hold', 'Resolved': 'status-resolved', 'Closed': 'status-closed'
+  getPriorityClass(p: string): string {
+    const m: Record<string,string> = {
+      P1_CRITICAL: 'priority-critical', P2_HIGH: 'priority-high',
+      P3_MEDIUM: 'priority-medium', P4_LOW: 'priority-low'
     };
-    return map[s ?? ''] ?? '';
+    return m[p] ?? '';
+  }
+  getStatusClass(s: string): string {
+    const m: Record<string,string> = {
+      OPEN: 'status-open', IN_PROGRESS: 'status-progress',
+      RESOLVED: 'status-resolved', CLOSED: 'status-closed'
+    };
+    return m[s] ?? '';
   }
 }
