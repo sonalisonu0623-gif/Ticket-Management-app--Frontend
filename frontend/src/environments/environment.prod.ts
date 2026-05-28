@@ -1,10 +1,10 @@
 export const environment = {
-  production: false,
-  apiBaseUrl: 'http://localhost:8080/api',
+  production: true,
+  apiBaseUrl: '/api',
   appName: 'TicketOps',
   appVersion: '2.0.0',
   tokenKey: 'ticketops_jwt_token',
   userKey: 'ticketops_user_data',
   projectKey: 'ticketops_active_project',
-  sessionTimeout: 3600000 // 1 hour in ms
+  sessionTimeout: 3600000
 };

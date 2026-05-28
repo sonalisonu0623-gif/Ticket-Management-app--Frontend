@@ -1,58 +1,131 @@
 import { Routes } from '@angular/router';
-import { AuthGuard } from './guards/auth.guard';
-import { RoleGuard } from './guards/role.guard';
+import { authGuard } from './core/guards/auth.guard';
+import { unauthGuard } from './core/guards/unauth.guard';
+import { adminGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
-  { path: 'login', loadComponent: () => import('./components/login/login.component').then(m => m.LoginComponent) },
-  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  // ---- Auth ----
+  {
+    path: 'auth',
+    canActivate: [unauthGuard],
+    children: [
+      {
+        path: 'login',
+        loadComponent: () => import('./features/auth/login/login.component').then(m => m.LoginComponent)
+      },
+      { path: '', redirectTo: 'login', pathMatch: 'full' }
+    ]
+  },
 
-  // ── Dashboard — ADMIN only ─────────────────────────────────────────────
-  { path: 'dashboard', canActivate: [AuthGuard, RoleGuard], data: { roles: ['ADMIN'] },
-    loadComponent: () => import('./components/dashboard/dashboard.component').then(m => m.DashboardComponent) },
+  // ---- Main app (authenticated) ----
+  {
+    path: '',
+    loadComponent: () => import('./layouts/main-layout/main-layout.component').then(m => m.MainLayoutComponent),
+    canActivate: [authGuard],
+    children: [
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
 
-  // ── All Tickets (ADMIN sees all; PM sees project-scoped) ───────────────
-  { path: 'tickets', canActivate: [AuthGuard, RoleGuard], data: { roles: ['ADMIN', 'PROJECT_MANAGER'] },
-    loadComponent: () => import('./components/ticket-list/ticket-list.component').then(m => m.TicketListComponent) },
+      {
+        path: 'dashboard',
+        loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
+        title: 'Dashboard'
+      },
 
-  { path: 'tickets/new', canActivate: [AuthGuard, RoleGuard], data: { roles: ['ADMIN', 'PROJECT_MANAGER'] },
-    loadComponent: () => import('./components/ticket-form/ticket-form.component').then(m => m.TicketFormComponent) },
+      // Tickets
+      {
+        path: 'tickets',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/tickets/ticket-list/ticket-list.component').then(m => m.TicketListComponent),
+            title: 'Tickets'
+          },
+          {
+            path: 'new',
+            loadComponent: () => import('./features/tickets/ticket-form/ticket-form.component').then(m => m.TicketFormComponent),
+            title: 'New Ticket'
+          },
+          {
+            path: 'edit/:id',
+            loadComponent: () => import('./features/tickets/ticket-form/ticket-form.component').then(m => m.TicketFormComponent),
+            title: 'Edit Ticket'
+          },
+          {
+            path: ':id',
+            loadComponent: () => import('./features/tickets/ticket-detail/ticket-detail.component').then(m => m.TicketDetailComponent),
+            title: 'Ticket Detail'
+          }
+        ]
+      },
 
-  { path: 'tickets/edit/:id', canActivate: [AuthGuard, RoleGuard], data: { roles: ['ADMIN', 'PROJECT_MANAGER'] },
-    loadComponent: () => import('./components/ticket-form/ticket-form.component').then(m => m.TicketFormComponent) },
+      // Reports
+      {
+        path: 'reports',
+        loadComponent: () => import('./features/reports/reports.component').then(m => m.ReportsComponent),
+        title: 'Reports',
+        canActivate: [authGuard],
+        data: { roles: ['ADMIN', 'PROJECT_MANAGER'] }
+      },
 
-  // Read-only detail — all authenticated users (ADMIN, PM, EMPLOYEE)
-  { path: 'tickets/view/:id', canActivate: [AuthGuard],
-    loadComponent: () => import('./components/ticket-detail/ticket-detail.component').then(m => m.TicketDetailComponent) },
+      // Profile
+      {
+        path: 'profile',
+        loadComponent: () => import('./features/profile/profile.component').then(m => m.ProfileComponent),
+        title: 'My Profile'
+      },
 
-  // ── My Tickets — EMPLOYEE read-only view ────────────────────────────────
-  { path: 'my-tickets', canActivate: [AuthGuard, RoleGuard], data: { roles: ['EMPLOYEE'] },
-    loadComponent: () => import('./components/my-tickets/my-tickets.component').then(m => m.MyTicketsComponent) },
+      // Configuration (Admin only)
+      {
+        path: 'config',
+        canActivate: [adminGuard],
+        children: [
+          {
+            path: '',
+            redirectTo: 'projects',
+            pathMatch: 'full'
+          },
+          {
+            path: 'projects',
+            loadComponent: () => import('./features/config/projects/config-projects.component').then(m => m.ConfigProjectsComponent),
+            title: 'Project Management'
+          },
+          {
+            path: 'employees',
+            loadComponent: () => import('./features/config/employees/config-employees.component').then(m => m.ConfigEmployeesComponent),
+            title: 'Employee Management'
+          },
+          {
+            path: 'authorization',
+            loadComponent: () => import('./features/config/project-auth/config-project-auth.component').then(m => m.ConfigProjectAuthComponent),
+            title: 'Project Authorization'
+          },
+          {
+            path: 'shifts',
+            loadComponent: () => import('./features/config/shifts/config-shifts.component').then(m => m.ConfigShiftsComponent),
+            title: 'Shift Management'
+          },
+          {
+            path: 'sla',
+            loadComponent: () => import('./features/config/sla/config-sla.component').then(m => m.ConfigSlaComponent),
+            title: 'SLA Configuration'
+          }
+        ]
+      },
 
-  // ── Configuration — ADMIN only ─────────────────────────────────────────
-  { path: 'configuration', canActivate: [AuthGuard, RoleGuard], data: { roles: ['ADMIN'] },
-    loadComponent: () => import('./components/configuration/configuration.component').then(m => m.ConfigurationComponent) },
+      // Error pages
+      {
+        path: 'forbidden',
+        loadComponent: () => import('./features/errors/forbidden.component').then(m => m.ForbiddenComponent),
+        title: '403 - Forbidden'
+      },
+      {
+        path: 'not-found',
+        loadComponent: () => import('./features/errors/not-found.component').then(m => m.NotFoundComponent),
+        title: '404 - Not Found'
+      }
+    ]
+  },
 
-  // Employee / Project forms — redirect back to /configuration after save
-  { path: 'projects/new', canActivate: [AuthGuard, RoleGuard], data: { roles: ['ADMIN', 'PROJECT_MANAGER'] },
-    loadComponent: () => import('./components/project-form/project-form.component').then(m => m.ProjectFormComponent) },
-  { path: 'projects/edit/:id', canActivate: [AuthGuard, RoleGuard], data: { roles: ['ADMIN', 'PROJECT_MANAGER'] },
-    loadComponent: () => import('./components/project-form/project-form.component').then(m => m.ProjectFormComponent) },
-
-  { path: 'employees/new', canActivate: [AuthGuard, RoleGuard], data: { roles: ['ADMIN'] },
-    loadComponent: () => import('./components/employee-form/employee-form.component').then(m => m.EmployeeFormComponent) },
-  { path: 'employees/edit/:id', canActivate: [AuthGuard, RoleGuard], data: { roles: ['ADMIN'] },
-    loadComponent: () => import('./components/employee-form/employee-form.component').then(m => m.EmployeeFormComponent) },
-
-  // Legacy list redirects into Configuration tab
-  { path: 'employees', redirectTo: 'configuration', pathMatch: 'full' },
-  { path: 'projects',  redirectTo: 'configuration', pathMatch: 'full' },
-  { path: 'users',     redirectTo: 'configuration', pathMatch: 'full' },
-
-  // Profile / Change Password — all authenticated
-  { path: 'profile', canActivate: [AuthGuard],
-    loadComponent: () => import('./components/profile/profile.component').then(m => m.ProfileComponent) },
-  { path: 'change-password', canActivate: [AuthGuard],
-    loadComponent: () => import('./components/change-password/change-password.component').then(m => m.ChangePasswordComponent) },
-
-  { path: '**', redirectTo: 'login' }
+  { path: 'login', redirectTo: 'auth/login' },
+  { path: '**', redirectTo: '/not-found' }
 ];
