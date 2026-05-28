@@ -1,0 +1,249 @@
+<div class="list-page">
+
+  <!-- Header Row -->
+  <div class="list-header">
+    <div class="list-title">
+      <span class="title-accent">■</span>
+      MY ASSIGNED TICKETS
+      <span class="ticket-count">{{ totalElements }} assigned</span>
+    </div>
+    <!-- EMPLOYEE: READ-ONLY — no create button -->
+    <div class="readonly-notice">
+      <span class="ro-icon">⊙</span> READ-ONLY VIEW — Contact your project manager for changes
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div class="alert alert-error" *ngIf="error"><span>✕</span> {{ error }}</div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <div class="search-box">
+      <span class="search-icon">⌕</span>
+      <input type="text" class="search-input" placeholder="Search by ticket ID..."
+             [(ngModel)]="searchQuery" (ngModelChange)="onSearchChange()" />
+    </div>
+    <select class="filter-select" [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()">
+      <option *ngFor="let opt of statusOptions" [value]="opt.value">{{ opt.label }}</option>
+    </select>
+    <select class="filter-select" [(ngModel)]="filterPriority" (ngModelChange)="onFilterChange()">
+      <option *ngFor="let opt of priorityOptions" [value]="opt.value">{{ opt.label }}</option>
+    </select>
+    <button class="btn-clear" (click)="clearFilters()">✕ Clear</button>
+  </div>
+
+  <!-- Main layout: table + inline detail panel -->
+  <div class="mt-layout" [class.has-detail]="!!selectedTicket">
+
+    <!-- Table -->
+    <div class="table-container">
+      <div class="loading-overlay" *ngIf="loading">
+        <div class="spinner"></div><span>Loading your tickets...</span>
+      </div>
+
+      <table class="ticket-table" *ngIf="!loading">
+        <thead>
+          <tr>
+            <th>TICKET ID</th>
+            <th>PROJECT</th>
+            <th>ISSUE</th>
+            <th>PRIORITY</th>
+            <th>STATUS</th>
+            <th>SLA</th>
+            <th>CREATED</th>
+            <th>DETAIL</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let ticket of tickets"
+              class="ticket-row"
+              [class.sla-breached-row]="ticket.slaBreached"
+              [class.row-selected]="selectedTicket?.id === ticket.id">
+            <td>
+              <span class="ticket-id-badge">{{ ticket.ticketId }}</span>
+            </td>
+            <td>
+              <span class="project-tag">{{ ticket.projectAssignment }}</span>
+            </td>
+            <td>
+              <span class="description-text" [title]="ticket.issueDescription">
+                {{ ticket.issueDescription | slice:0:55 }}{{ ticket.issueDescription && ticket.issueDescription.length > 55 ? '...' : '' }}
+              </span>
+            </td>
+            <td>
+              <span class="priority-badge" [ngClass]="getPriorityClass(ticket.priority)">
+                {{ priorityLabels[ticket.priority] }}
+              </span>
+            </td>
+            <td>
+              <span class="status-badge" [ngClass]="getStatusClass(ticket.currentStatus)">
+                {{ statusLabels[ticket.currentStatus] }}
+              </span>
+            </td>
+            <td>
+              <div *ngIf="ticket.slaDeadline; else noSla">
+                <span class="sla-badge"
+                      [class.sla-breached]="ticket.slaBreached"
+                      [class.sla-ok]="!ticket.slaBreached">
+                  {{ ticket.slaBreached ? '⚠ BREACHED' : '✓ ON TRACK' }}
+                </span>
+                <div class="sla-deadline">{{ ticket.slaDeadline | date:'dd MMM, HH:mm' }}</div>
+              </div>
+              <ng-template #noSla><span class="text-muted">—</span></ng-template>
+            </td>
+            <td>
+              <span class="date-text">{{ ticket.createdAt | date:'dd MMM yy, HH:mm' }}</span>
+            </td>
+            <td>
+              <!-- READ-ONLY: expand inline detail, link to view page — NO edit button -->
+              <div class="action-buttons">
+                <button class="btn-action btn-view"
+                        [class.btn-active]="selectedTicket?.id === ticket.id"
+                        (click)="openDetail(ticket)"
+                        title="View details">
+                  {{ selectedTicket?.id === ticket.id ? '▲' : '▼' }}
+                </button>
+                <a [routerLink]="['/tickets/view', ticket.id]" class="btn-action btn-view" title="Full view">⊙</a>
+              </div>
+            </td>
+          </tr>
+
+          <tr *ngIf="tickets.length === 0 && !loading">
+            <td colspan="8" class="empty-state">
+              <div class="empty-icon">▦</div>
+              <div>No tickets assigned to you</div>
+              <div class="empty-sub">Tickets assigned to your account will appear here</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Inline Read-Only Detail Panel -->
+    <div class="detail-panel" *ngIf="selectedTicket">
+      <div class="dp-header">
+        <div class="dp-title">
+          <span class="dp-ticket-id">{{ selectedTicket.ticketId }}</span>
+          <span class="dp-badge" [ngClass]="getStatusClass(selectedTicket.currentStatus)">
+            {{ statusLabels[selectedTicket.currentStatus] }}
+          </span>
+          <span class="dp-badge" [ngClass]="getPriorityClass(selectedTicket.priority)">
+            {{ priorityLabels[selectedTicket.priority] }}
+          </span>
+        </div>
+        <button class="dp-close" (click)="closeDetail()">✕</button>
+      </div>
+
+      <div class="dp-loading" *ngIf="detailLoading">
+        <div class="spinner"></div>
+      </div>
+
+      <div class="dp-body" *ngIf="!detailLoading">
+
+        <!-- Project + Assignee -->
+        <div class="dp-row">
+          <div class="dp-field">
+            <div class="dp-label">PROJECT</div>
+            <div class="dp-value">{{ selectedTicket.projectAssignment }}</div>
+          </div>
+          <div class="dp-field">
+            <div class="dp-label">ASSIGNED TO</div>
+            <div class="dp-value">{{ selectedTicket.assignedEmployee || '—' }}</div>
+          </div>
+        </div>
+
+        <!-- Support Level + Priority -->
+        <div class="dp-row">
+          <div class="dp-field">
+            <div class="dp-label">SUPPORT LEVEL</div>
+            <div class="dp-value mono">{{ selectedTicket.supportLevel }}</div>
+          </div>
+          <div class="dp-field">
+            <div class="dp-label">PRIORITY</div>
+            <div class="dp-value">{{ priorityLabels[selectedTicket.priority] }}</div>
+          </div>
+        </div>
+
+        <!-- Issue Description -->
+        <div class="dp-field dp-full">
+          <div class="dp-label">ISSUE DESCRIPTION</div>
+          <div class="dp-value dp-desc">{{ selectedTicket.issueDescription }}</div>
+        </div>
+
+        <!-- SLA Section -->
+        <div class="dp-sla-block" *ngIf="selectedTicket.slaDeadline">
+          <div class="dp-sla-title">⏱ SLA STATUS</div>
+          <div class="dp-row">
+            <div class="dp-field">
+              <div class="dp-label">DEADLINE</div>
+              <div class="dp-value mono">{{ selectedTicket.slaDeadline | date:'dd MMM yyyy, HH:mm' }}</div>
+            </div>
+            <div class="dp-field">
+              <div class="dp-label">WORKING HRS ELAPSED</div>
+              <div class="dp-value mono">{{ selectedTicket.workingHoursElapsed ?? '—' }} hrs</div>
+            </div>
+            <div class="dp-field">
+              <div class="dp-label">STATUS</div>
+              <div class="dp-value">
+                <span class="sla-status-badge"
+                      [class.sla-breached]="selectedTicket.slaBreached"
+                      [class.sla-ok]="!selectedTicket.slaBreached">
+                  {{ selectedTicket.slaBreached ? '⚠ BREACHED' : '✓ ON TRACK' }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="dp-row" *ngIf="selectedTicket.generationDateTime || selectedTicket.responseDateTime">
+          <div class="dp-field" *ngIf="selectedTicket.generationDateTime">
+            <div class="dp-label">GENERATED</div>
+            <div class="dp-value mono">{{ selectedTicket.generationDateTime | date:'dd MMM yyyy, HH:mm' }}</div>
+          </div>
+          <div class="dp-field" *ngIf="selectedTicket.responseDateTime">
+            <div class="dp-label">RESPONDED</div>
+            <div class="dp-value mono">{{ selectedTicket.responseDateTime | date:'dd MMM yyyy, HH:mm' }}</div>
+          </div>
+          <div class="dp-field" *ngIf="selectedTicket.resolutionTime">
+            <div class="dp-label">RESOLVED</div>
+            <div class="dp-value mono">{{ selectedTicket.resolutionTime | date:'dd MMM yyyy, HH:mm' }}</div>
+          </div>
+        </div>
+
+        <!-- Resolution Details -->
+        <div class="dp-field dp-full" *ngIf="selectedTicket.resolutionDetails">
+          <div class="dp-label">RESOLUTION DETAILS</div>
+          <div class="dp-value dp-desc">{{ selectedTicket.resolutionDetails }}</div>
+        </div>
+
+        <!-- Remarks -->
+        <div class="dp-field dp-full" *ngIf="selectedTicket.remarks">
+          <div class="dp-label">REMARKS</div>
+          <div class="dp-value dp-desc">{{ selectedTicket.remarks }}</div>
+        </div>
+
+        <!-- Full page link -->
+        <div class="dp-footer">
+          <a [routerLink]="['/tickets/view', selectedTicket.id]" class="dp-full-link">
+            ⊙ View full detail page
+          </a>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" *ngIf="totalPages > 1">
+    <button class="page-btn" (click)="goToPage(0)" [disabled]="currentPage === 0">«</button>
+    <button class="page-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0">‹</button>
+    <button *ngFor="let p of pages" class="page-btn"
+            [class.active]="p === currentPage" (click)="goToPage(p)">{{ p + 1 }}</button>
+    <button class="page-btn" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages - 1">›</button>
+    <button class="page-btn" (click)="goToPage(totalPages - 1)" [disabled]="currentPage === totalPages - 1">»</button>
+    <span class="page-info">Page {{ currentPage + 1 }} of {{ totalPages }}</span>
+  </div>
+
+</div>

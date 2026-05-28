@@ -1,0 +1,117 @@
+<div class="list-page">
+
+  <div class="list-header">
+    <div class="list-title">
+      <span class="title-accent">■</span>
+      USER MANAGEMENT
+      <span class="ticket-count">{{ totalElements }} records</span>
+    </div>
+    <a routerLink="/users/new" class="btn-create">
+      <span>＋</span> CREATE USER
+    </a>
+  </div>
+
+  <div class="alert alert-success" *ngIf="successMessage"><span>✓</span> {{ successMessage }}</div>
+  <div class="alert alert-error"   *ngIf="error"><span>✕</span> {{ error }}</div>
+
+  <!-- Reset-password modal -->
+  <div class="modal-backdrop" *ngIf="resetTarget">
+    <div class="modal-card">
+      <div class="modal-title">RESET PASSWORD — {{ resetTarget.username }}</div>
+      <div class="form-group" style="margin-top:1rem;">
+        <label class="form-label required"><span class="label-prefix">01</span> NEW PASSWORD</label>
+        <input type="password" class="form-control" [(ngModel)]="resetPassword" placeholder="Min 6 characters" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn-submit" (click)="confirmReset()" [disabled]="!resetPassword || resetPassword.length < 6">✓ CONFIRM RESET</button>
+        <button class="btn-cancel-modal" (click)="cancelReset()">✕ CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <div class="search-box">
+      <span class="search-icon">⌕</span>
+      <input type="text" class="search-input" placeholder="Search by username or email..."
+             [(ngModel)]="searchQuery" (ngModelChange)="onSearchChange()" />
+    </div>
+    <select class="filter-select" [(ngModel)]="filterRole" (ngModelChange)="onFilterChange()">
+      <option *ngFor="let opt of roleOptions" [value]="opt.value">{{ opt.label }}</option>
+    </select>
+    <select class="filter-select" [(ngModel)]="filterActive" (ngModelChange)="onFilterChange()">
+      <option value="">All Status</option>
+      <option value="true">Active</option>
+      <option value="false">Inactive</option>
+    </select>
+    <button class="btn-clear" (click)="clearFilters()">✕ Clear</button>
+  </div>
+
+  <div class="table-container">
+    <div class="loading-overlay" *ngIf="loading">
+      <div class="spinner"></div><span>Loading users...</span>
+    </div>
+    <table class="ticket-table" *ngIf="!loading">
+      <thead>
+        <tr>
+          <th>USERNAME</th>
+          <th>EMAIL</th>
+          <th>ROLE</th>
+          <th>EMPLOYEE</th>
+          <th>STATUS</th>
+          <th>CREATED</th>
+          <th>ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of users" class="ticket-row">
+          <td><span class="ticket-id-badge">{{ user.username }}</span></td>
+          <td><span class="emp-email">{{ user.email }}</span></td>
+          <td>
+            <span class="role-badge" [ngClass]="getRoleClass(user.role)">
+              {{ roleLabels[user.role] }}
+            </span>
+          </td>
+          <td><span class="description-text">{{ user.employeeName || '—' }}</span></td>
+          <td>
+            <span class="status-badge" [ngClass]="user.isActive ? 'status-active' : 'status-inactive'">
+              {{ user.isActive ? 'Active' : 'Inactive' }}
+            </span>
+          </td>
+          <td><span class="date-text">{{ user.createdAt | date:'dd MMM yy, HH:mm' }}</span></td>
+          <td>
+            <div class="action-buttons">
+              <a [routerLink]="['/users/edit', user.id]" class="btn-action btn-edit" title="Edit">✎</a>
+              <button class="btn-action btn-reset-pw" (click)="openResetPassword(user)" title="Reset Password">🔑</button>
+              <button
+                class="btn-action"
+                [ngClass]="user.isActive ? 'btn-deactivate' : 'btn-activate'"
+                (click)="toggleActive(user)"
+                [title]="user.isActive ? 'Deactivate' : 'Activate'"
+                [disabled]="toggleLoading === user.id"
+              >
+                {{ user.isActive ? '⊘' : '⊙' }}
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="users.length === 0 && !loading">
+          <td colspan="7" class="empty-state">
+            <div class="empty-icon">◉</div>
+            <div>No users found</div>
+            <div class="empty-sub">Try adjusting your filters or <a routerLink="/users/new">create a new user</a></div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination" *ngIf="totalPages > 1">
+    <button class="page-btn" (click)="goToPage(0)" [disabled]="currentPage === 0">«</button>
+    <button class="page-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0">‹</button>
+    <button *ngFor="let p of pages" class="page-btn" [class.active]="p === currentPage" (click)="goToPage(p)">{{ p + 1 }}</button>
+    <button class="page-btn" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages - 1">›</button>
+    <button class="page-btn" (click)="goToPage(totalPages - 1)" [disabled]="currentPage === totalPages - 1">»</button>
+    <span class="page-info">Page {{ currentPage + 1 }} of {{ totalPages }} · {{ totalElements }} total</span>
+  </div>
+
+</div>
