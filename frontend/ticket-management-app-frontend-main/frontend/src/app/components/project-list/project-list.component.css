@@ -1,0 +1,37 @@
+.list-page { color: var(--text-body); }
+.list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+.list-title {
+  display: flex; align-items: center; gap: 0.75rem;
+  font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 700; color: var(--text-dark);
+}
+.title-accent { color: var(--amber); }
+.ticket-count {
+  font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--text-muted); font-weight: 400;
+  background: var(--surface-3); padding: 0.2rem 0.65rem; border-radius: 20px; border: 1px solid var(--border);
+}
+.btn-create {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.5rem;
+  background: var(--purple); border: none; border-radius: var(--radius-md); color: #fff;
+  font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: all 0.2s;
+  box-shadow: 0 3px 12px rgba(91,63,160,0.3); cursor: pointer;
+}
+.btn-create:hover { background: var(--purple-light); transform: translateY(-1px); }
+.table-container {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-md);
+  position: relative; min-height: 200px;
+}
+.ticket-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.ticket-table thead tr { background: linear-gradient(135deg, var(--ink) 0%, var(--ink-mid) 100%); }
+.ticket-table th {
+  padding: 1rem 1.25rem; text-align: left; font-size: 0.68rem; font-weight: 600;
+  letter-spacing: 0.1em; color: rgba(255,255,255,0.5); text-transform: uppercase; white-space: nowrap;
+}
+.ticket-row { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+.ticket-row:last-child { border-bottom: none; }
+.ticket-row:hover { background: var(--purple-faint); }
+.ticket-table td { padding: 0.95rem 1.25rem; vertical-align: middle; }
+.ticket-id-badge { font-family: 'DM Mono', monospace; font-size: 0.82rem; font-weight: 600; color: var(--purple); }
+.project-name { color: var(--text-dark); font-weight: 600; }
+.description-text { color: var(--text-mid); font-size: 0.82rem; }
+.date-text { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; }

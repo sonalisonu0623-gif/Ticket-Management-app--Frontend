@@ -1,0 +1,220 @@
+<div class="list-page">
+
+  <!-- Dashboard Stats -->
+  <div class="stats-grid" *ngIf="dashboardStats">
+    <div class="stat-card stat-total">
+      <div class="stat-value">{{ dashboardStats.totalTickets }}</div>
+      <div class="stat-label">Total Tickets</div>
+      <div class="stat-bar"></div>
+    </div>
+    <div class="stat-card stat-open">
+      <div class="stat-value">{{ dashboardStats.openTickets }}</div>
+      <div class="stat-label">Open</div>
+    </div>
+    <div class="stat-card stat-progress">
+      <div class="stat-value">{{ dashboardStats.inProgressTickets }}</div>
+      <div class="stat-label">In Progress</div>
+    </div>
+    <div class="stat-card stat-resolved">
+      <div class="stat-value">{{ dashboardStats.resolvedTickets }}</div>
+      <div class="stat-label">Resolved</div>
+    </div>
+    <div class="stat-card stat-closed">
+      <div class="stat-value">{{ dashboardStats.closedTickets }}</div>
+      <div class="stat-label">Closed</div>
+    </div>
+    <div class="stat-card stat-breach" *ngIf="dashboardStats.slaBreachedTickets !== undefined">
+      <div class="stat-value breach-val">{{ dashboardStats.slaBreachedTickets }}</div>
+      <div class="stat-label">SLA Breached</div>
+    </div>
+  </div>
+
+  <!-- Header Row -->
+  <div class="list-header">
+    <div class="list-title">
+      <span class="title-accent">■</span>
+      <!-- PM: show "PROJECT TICKETS" with current project context -->
+      <ng-container *ngIf="isPM">
+        PROJECT TICKETS
+        <span class="project-context-badge" *ngIf="filterProject">· {{ filterProject }}</span>
+      </ng-container>
+      <ng-container *ngIf="isAdmin">INCIDENT TICKETS</ng-container>
+      <span class="ticket-count">{{ totalElements }} records</span>
+    </div>
+    <a routerLink="/tickets/new" class="btn-create"><span>＋</span> CREATE TICKET</a>
+  </div>
+
+  <!-- PM: Project Selector Banner (when they have multiple projects) -->
+  <div class="pm-project-bar" *ngIf="isPM && myProjects.length > 1">
+    <span class="pm-bar-label">⬡ YOUR PROJECTS</span>
+    <button *ngFor="let p of myProjects"
+            class="pm-project-btn"
+            [class.active]="filterProject === p.projectName"
+            (click)="filterProject = p.projectName; onFilterChange()">
+      <span class="pm-proj-code">{{ p.projectCode }}</span>
+      <span class="pm-proj-name">{{ p.projectName }}</span>
+    </button>
+    <button class="pm-project-btn"
+            [class.active]="filterProject === ''"
+            (click)="filterProject = ''; onFilterChange()">
+      All My Projects
+    </button>
+  </div>
+
+  <!-- PM: Single project notice -->
+  <div class="pm-project-bar pm-single" *ngIf="isPM && myProjects.length === 1">
+    <span class="pm-bar-label">⬡ PROJECT SCOPE</span>
+    <span class="pm-project-name-only">{{ myProjects[0].projectCode }} — {{ myProjects[0].projectName }}</span>
+  </div>
+
+  <!-- PM: No projects assigned -->
+  <div class="alert alert-error" *ngIf="isPM && myProjects.length === 0 && !loading">
+    <span>⚠</span> Your account is not assigned to any projects. Contact your administrator.
+  </div>
+
+  <!-- Alerts -->
+  <div class="alert alert-success" *ngIf="successMessage"><span>✓</span> {{ successMessage }}</div>
+  <div class="alert alert-error"   *ngIf="error"><span>✕</span> {{ error }}</div>
+
+  <!-- Search & Filter Bar -->
+  <div class="filter-bar">
+    <div class="search-box">
+      <span class="search-icon">⌕</span>
+      <input type="text" class="search-input" placeholder="Search ticket ID..."
+             [(ngModel)]="searchQuery" (ngModelChange)="onSearchChange()" />
+    </div>
+
+    <!-- ADMIN only: project filter dropdown -->
+    <select class="filter-select" *ngIf="isAdmin"
+            [(ngModel)]="filterProject" (ngModelChange)="onFilterChange()">
+      <option value="">All Projects</option>
+      <option *ngFor="let p of allProjects" [value]="p.projectName">
+        {{ p.projectCode }} — {{ p.projectName }}
+      </option>
+    </select>
+
+    <select class="filter-select" [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()">
+      <option *ngFor="let opt of statusOptions" [value]="opt.value">{{ opt.label }}</option>
+    </select>
+    <select class="filter-select" [(ngModel)]="filterPriority" (ngModelChange)="onFilterChange()">
+      <option *ngFor="let opt of priorityOptions" [value]="opt.value">{{ opt.label }}</option>
+    </select>
+    <button class="btn-clear" (click)="clearFilters()">✕ Clear</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-container">
+    <div class="loading-overlay" *ngIf="loading">
+      <div class="spinner"></div><span>Loading tickets...</span>
+    </div>
+
+    <!-- PM: prompt to pick a project when multiple assigned -->
+    <div class="empty-state-prompt" *ngIf="isPM && myProjects.length > 1 && !filterProject && !loading">
+      <div class="empty-icon">◈</div>
+      <div>Select a project above to view its tickets</div>
+      <div class="empty-sub">Or click "All My Projects" to view tickets across all your projects</div>
+    </div>
+
+    <table class="ticket-table" *ngIf="!loading && !(isPM && myProjects.length > 1 && !filterProject)">
+      <thead>
+        <tr>
+          <th>TICKET ID</th>
+          <th>PROJECT</th>
+          <th>ISSUE</th>
+          <th>ASSIGNED TO</th>
+          <th>LEVEL</th>
+          <th>PRIORITY</th>
+          <th>STATUS</th>
+          <th>CREATED</th>
+          <th>SLA</th>
+          <th>ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let ticket of tickets" class="ticket-row"
+            [class.sla-breached-row]="ticket.slaBreached">
+          <td>
+            <span class="ticket-id-badge">{{ ticket.ticketId }}</span>
+          </td>
+          <td>
+            <span class="project-tag">{{ ticket.projectAssignment }}</span>
+          </td>
+          <td>
+            <span class="description-text" [title]="ticket.issueDescription">
+              {{ ticket.issueDescription | slice:0:55 }}{{ ticket.issueDescription && ticket.issueDescription.length > 55 ? '...' : '' }}
+            </span>
+          </td>
+          <td>
+            <span class="assignee">{{ ticket.assignedEmployee || '—' }}</span>
+          </td>
+          <td>
+            <span class="level-badge">{{ ticket.supportLevel }}</span>
+          </td>
+          <td>
+            <span class="priority-badge" [ngClass]="getPriorityClass(ticket.priority)">
+              {{ priorityLabels[ticket.priority] }}
+            </span>
+          </td>
+          <td>
+            <span class="status-badge" [ngClass]="getStatusClass(ticket.currentStatus)">
+              {{ statusLabels[ticket.currentStatus] }}
+            </span>
+          </td>
+          <td>
+            <span class="date-text">{{ ticket.createdAt | date:'dd MMM yy, HH:mm' }}</span>
+          </td>
+          <!-- SLA column -->
+          <td>
+            <div *ngIf="ticket.slaDeadline; else noSla">
+              <span class="sla-badge"
+                    [class.sla-breached]="ticket.slaBreached"
+                    [class.sla-ok]="!ticket.slaBreached"
+                    [title]="'Deadline: ' + (ticket.slaDeadline | date:'dd MMM yy, HH:mm')">
+                {{ ticket.slaBreached ? '⚠ BREACHED' : '✓ ON TRACK' }}
+              </span>
+              <div class="sla-deadline">{{ ticket.slaDeadline | date:'dd MMM, HH:mm' }}</div>
+            </div>
+            <ng-template #noSla><span class="text-muted">—</span></ng-template>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <a [routerLink]="['/tickets/view', ticket.id]" class="btn-action btn-view" title="View">👁</a>
+              <a [routerLink]="['/tickets/edit', ticket.id]" class="btn-action btn-edit" title="Edit">✎</a>
+              <!-- ADMIN only: delete -->
+              <button *ngIf="isAdmin"
+                class="btn-action btn-delete"
+                (click)="deleteTicket(ticket.id!)"
+                [disabled]="deleteLoading === ticket.id"
+                title="Delete">
+                <span *ngIf="deleteLoading !== ticket.id">✕</span>
+                <span *ngIf="deleteLoading === ticket.id">⋯</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+
+        <tr *ngIf="tickets.length === 0 && !loading">
+          <td colspan="10" class="empty-state">
+            <div class="empty-icon">▦</div>
+            <div>No tickets found</div>
+            <div class="empty-sub" *ngIf="filterProject || filterStatus || filterPriority || searchQuery">
+              Try adjusting your filters
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" *ngIf="totalPages > 1">
+    <button class="page-btn" (click)="goToPage(0)" [disabled]="currentPage === 0">«</button>
+    <button class="page-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0">‹</button>
+    <button *ngFor="let p of pages" class="page-btn"
+            [class.active]="p === currentPage" (click)="goToPage(p)">{{ p + 1 }}</button>
+    <button class="page-btn" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages - 1">›</button>
+    <button class="page-btn" (click)="goToPage(totalPages - 1)" [disabled]="currentPage === totalPages - 1">»</button>
+    <span class="page-info">Page {{ currentPage + 1 }} of {{ totalPages }}</span>
+  </div>
+
+</div>
