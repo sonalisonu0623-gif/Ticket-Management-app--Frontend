@@ -1,0 +1,96 @@
+<div class="page-wrapper">
+
+  <div class="page-header">
+    <div class="page-title-block">
+      <h1 class="page-title">Projects</h1>
+      <p class="page-subtitle">{{ projects.length }} project{{ projects.length !== 1 ? 's' : '' }} configured</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-primary" (click)="openCreate()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+        New Project
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="spinner-wrap"><div class="spinner"></div></div>
+
+  <div class="table-card" *ngIf="!loading">
+    <div *ngIf="projects.length === 0" class="empty-state">
+      <svg class="empty-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+      </svg>
+      <p class="empty-title">No projects yet</p>
+      <p class="empty-sub">Create your first project to start organizing tickets</p>
+    </div>
+
+    <div class="table-wrapper" *ngIf="projects.length > 0">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width:60px">#</th>
+            <th>Project Name</th>
+            <th style="width:80px">ID</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of projects; let i = index">
+            <td class="text-muted text-sm">{{ i + 1 }}</td>
+            <td>
+              <div class="project-name-cell">
+                <div class="project-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+                  </svg>
+                </div>
+                {{ p.projectName }}
+              </div>
+            </td>
+            <td class="text-muted mono text-sm">{{ p.id }}</td>
+            <td>
+              <div class="action-group">
+                <button class="action-btn edit" title="Edit project" (click)="openEdit(p)">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="action-btn delete" title="Delete project" (click)="deleteProject(p)">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2 class="modal-title">{{ isEdit ? 'Edit Project' : 'New Project' }}</h2>
+      <button class="modal-close" (click)="closeModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <div class="modal-body">
+        <div class="form-field" style="margin-bottom:0;">
+          <label class="field-label required">Project Name</label>
+          <input formControlName="projectName" class="field-input" placeholder="e.g. CRM Platform, Network Infrastructure..."
+            [class.invalid]="hasError('projectName')" autofocus>
+          <span class="field-error" *ngIf="hasError('projectName')">Project name is required (min 2 characters)</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" (click)="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving">
+          <span class="btn-spinner" *ngIf="saving"></span>
+          {{ saving ? 'Saving...' : (isEdit ? 'Update' : 'Create Project') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

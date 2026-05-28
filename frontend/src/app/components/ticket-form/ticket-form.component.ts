@@ -1,219 +1,222 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { TicketService } from '../../services/ticket.service';
-import { EmployeeService } from '../../services/employee.service';
-import { ProjectService } from '../../services/project.service';
-import {
-  TicketRequest,
-  PRIORITY_LABELS,
-  STATUS_LABELS
-} from '../../models/ticket.model';
-import { Employee } from '../../models/employee.model';
-import { Project } from '../../models/project.model';
+import { RouterModule, ActivatedRoute, Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { SpinnerComponent } from '../shared/spinner.component';
+import { ApiService } from '../../services/api.service';
+import { ToastService } from '../../services/toast.service';
+import { Project, Employee, Ticket } from '../../models/models';
 
 @Component({
   selector: 'app-ticket-form',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, SpinnerComponent],
   templateUrl: './ticket-form.component.html',
-  styleUrls: ['./ticket-form.component.css']
 })
-export class TicketFormComponent implements OnInit {
-  ticketForm!: FormGroup;
-  isEditMode = false;
-  ticketId: number | null = null;
-  existingTicketId = '';
+export class TicketFormComponent implements OnInit, OnDestroy {
+  form!: FormGroup;
+  projects: Project[] = [];
+  employees: Employee[] = [];
+  isEdit = false;
+  ticketId?: number;
   loading = false;
   submitting = false;
-  error: string | null = null;
-  successMessage: string | null = null;
+  ticket?: Ticket;
 
-  projectOptions: Project[] = [];
-  employeeOptions: Employee[] = [];
+  priorities    = ['P1 - Critical', 'P2 - High', 'P3 - Medium', 'P4 - Low'];
   supportLevels = ['L1', 'L2', 'L3'];
+  statuses      = ['Open', 'In Progress', 'On Hold', 'Resolved', 'Closed'];
 
-  priorities = [
-    { value: 'P1_CRITICAL', label: 'P1 - Critical' },
-    { value: 'P2_HIGH', label: 'P2 - High' },
-    { value: 'P3_MEDIUM', label: 'P3 - Medium' },
-    { value: 'P4_LOW', label: 'P4 - Low' }
-  ];
-
-  statuses = [
-    { value: 'OPEN', label: 'Open' },
-    { value: 'IN_PROGRESS', label: 'In Progress' },
-    { value: 'RESOLVED', label: 'Resolved' },
-    { value: 'CLOSED', label: 'Closed' }
-  ];
+  private destroy$ = new Subject<void>();
 
   constructor(
-    private employeeService: EmployeeService,
-    private projectService: ProjectService,
     private fb: FormBuilder,
+    private api: ApiService,
+    private toast: ToastService,
     private route: ActivatedRoute,
-    private router: Router,
-    private ticketService: TicketService
+    private router: Router
   ) {}
 
-  ngOnInit(): void {
+  ngOnInit() {
     this.initForm();
+    this.loadDropdowns();
 
-    this.loadProjectOptions();
-    this.loadEmployeeOptions();
-    const id = this.route.snapshot.paramMap.get('id');
-    if (id) {
-      this.isEditMode = true;
-      this.ticketId = Number(id);
+    const rawId = this.route.snapshot.params['id'];
+    if (rawId) {
+      this.ticketId = +rawId;
+      this.isEdit = true;
       this.loadTicket(this.ticketId);
     }
-  }
 
-  initForm(): void {
-    this.ticketForm = this.fb.group({
-      projectAssignment: ['', [Validators.required]],
-      issueDescription: ['', [Validators.required, Validators.minLength(10)]],
-      assignedEmployee: [''],
-      supportLevel: ['L1', [Validators.required]],
-      priority: ['P3_MEDIUM', [Validators.required]],
-      generationDateTime: [''],
-      responseDateTime: [''],
-      resolutionTime: [''],
-      currentStatus: ['OPEN', [Validators.required]],
-      resolutionDetails: [''],
-      remarks: ['']
+    // Conditionally require resolutionDetails when status is Resolved or Closed
+    this.form.get('currentStatus')?.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(status => {
+      const resCtrl = this.form.get('resolutionDetails');
+      if (status === 'Resolved' || status === 'Closed') {
+        resCtrl?.setValidators([Validators.required, Validators.minLength(5)]);
+      } else {
+        resCtrl?.clearValidators();
+      }
+      resCtrl?.updateValueAndValidity({ emitEvent: false });
+    });
+
+    // Auto-calculate resolution time when response datetime changes
+    this.form.get('responseDatetime')?.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      this.calcResolutionTime();
     });
   }
 
-  loadTicket(id: number): void {
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  initForm() {
+    const now = this.toLocalStr(new Date());
+    this.form = this.fb.group({
+      ticketNumber:      [{ value: '', disabled: true }],
+      projectId:         [null, Validators.required],
+      issueDescription:  ['', [Validators.required, Validators.minLength(10)]],
+      assignedEmployeeId:[null],
+      supportLevel:      [''],
+      priority:          [''],
+      generationDatetime:[{ value: now, disabled: true }],
+      responseDatetime:  [''],
+      resolutionTime:    [{ value: '', disabled: true }],
+      currentStatus:     ['Open'],
+      resolutionDetails: [''],
+      remarks:           ['']
+    });
+  }
+
+  toLocalStr(d: Date): string {
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+
+  loadDropdowns() {
+    this.api.getProjects().subscribe({ next: p => this.projects = p });
+    this.api.getEmployees().subscribe({ next: e => this.employees = e });
+  }
+
+  loadTicket(id: number) {
     this.loading = true;
-    this.ticketService.getTicketById(id).subscribe({
-      next: (ticket) => {
-        this.existingTicketId = ticket.ticketId || '';
-        this.ticketForm.patchValue({
-          projectAssignment: ticket.projectAssignment,
-          issueDescription: ticket.issueDescription,
-          assignedEmployee: ticket.assignedEmployee,
-          supportLevel: ticket.supportLevel,
-          priority: ticket.priority,
-          generationDateTime: this.formatDateForInput(ticket.generationDateTime),
-          responseDateTime: this.formatDateForInput(ticket.responseDateTime),
-          resolutionTime: this.formatDateForInput(ticket.resolutionTime),
-          currentStatus: ticket.currentStatus,
-          resolutionDetails: ticket.resolutionDetails,
-          remarks: ticket.remarks
+    this.api.getTicketById(id).subscribe({
+      next: (t) => {
+        this.ticket = t;
+        this.form.patchValue({
+          ticketNumber:       t.ticketNumber,
+          projectId:          t.projectId,
+          issueDescription:   t.issueDescription,
+          assignedEmployeeId: t.assignedEmployeeId ?? null,
+          supportLevel:       t.supportLevel ?? '',
+          priority:           t.priority ?? '',
+          generationDatetime: t.generationDatetime ? this.toLocalStr(new Date(t.generationDatetime)) : '',
+          responseDatetime:   t.responseDatetime   ? this.toLocalStr(new Date(t.responseDatetime))   : '',
+          resolutionTime:     t.resolutionTime ?? '',
+          currentStatus:      t.currentStatus ?? 'Open',
+          resolutionDetails:  t.resolutionDetails ?? '',
+          remarks:            t.remarks ?? ''
         });
         this.loading = false;
       },
       error: () => {
-        this.error = 'Failed to load ticket details.';
+        this.toast.error('Failed to load ticket');
         this.loading = false;
+        this.router.navigate(['/tickets']);
       }
     });
   }
 
-  formatDateForInput(dateStr?: string): string {
-    if (!dateStr) return '';
-    // Convert ISO datetime string to datetime-local format
-    return dateStr.substring(0, 16);
-  }
-
-  formatDateForApi(dateStr: string): string | undefined {
-    if (!dateStr) return undefined;
-    return dateStr + ':00'; // append seconds
-  }
-
-  onSubmit(): void {
-    if (this.ticketForm.invalid) {
-      this.ticketForm.markAllAsTouched();
+  calcResolutionTime() {
+    // Use getRawValue() to access disabled generationDatetime
+    const raw = this.form.getRawValue();
+    const genStr = raw.generationDatetime;
+    const resStr = raw.responseDatetime;
+    if (!genStr || !resStr) {
+      this.form.get('resolutionTime')?.setValue('', { emitEvent: false });
       return;
     }
+    const diff = new Date(resStr).getTime() - new Date(genStr).getTime();
+    if (diff < 0) {
+      this.form.get('resolutionTime')?.setValue('Invalid — before creation', { emitEvent: false });
+      return;
+    }
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    this.form.get('resolutionTime')?.setValue(`${h}h ${m}m`, { emitEvent: false });
+  }
 
-    this.submitting = true;
-    this.error = null;
+  onSubmit() {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.toast.error('Please fix the errors before submitting');
+      return;
+    }
+    const raw = this.form.getRawValue();
 
-    const formValue = this.ticketForm.value;
-    const payload: TicketRequest = {
-      projectAssignment: formValue.projectAssignment,
-      issueDescription: formValue.issueDescription,
-      assignedEmployee: formValue.assignedEmployee || undefined,
-      supportLevel: formValue.supportLevel,
-      priority: formValue.priority,
-      generationDateTime: this.formatDateForApi(formValue.generationDateTime),
-      responseDateTime: this.formatDateForApi(formValue.responseDateTime),
-      resolutionTime: this.formatDateForApi(formValue.resolutionTime),
-      currentStatus: formValue.currentStatus,
-      resolutionDetails: formValue.resolutionDetails || undefined,
-      remarks: formValue.remarks || undefined
+    // Validate response datetime is not before generation datetime
+    if (raw.responseDatetime && raw.generationDatetime) {
+      if (new Date(raw.responseDatetime) < new Date(raw.generationDatetime)) {
+        this.toast.error('Response date cannot be before the generation date');
+        return;
+      }
+    }
+
+    const payload: Ticket = {
+      projectId:          raw.projectId,
+      issueDescription:   raw.issueDescription,
+      assignedEmployeeId: raw.assignedEmployeeId || undefined,
+      supportLevel:       raw.supportLevel   || undefined,
+      priority:           raw.priority       || undefined,
+      responseDatetime:   raw.responseDatetime || undefined,
+      currentStatus:      raw.currentStatus,
+      resolutionDetails:  raw.resolutionDetails || undefined,
+      remarks:            raw.remarks        || undefined
     };
 
-    if (this.isEditMode && this.ticketId) {
-      this.ticketService.updateTicket(this.ticketId, payload).subscribe({
-        next: () => {
-          this.submitting = false;
-          this.successMessage = 'Ticket updated successfully!';
-          setTimeout(() => this.router.navigate(['/tickets']), 1500);
-        },
-        error: (err) => {
-          this.submitting = false;
-          this.error = err.error?.message || 'Failed to update ticket.';
-        }
-      });
-    } else {
-      this.ticketService.createTicket(payload).subscribe({
-        next: (ticket) => {
-          this.submitting = false;
-          this.successMessage = `Ticket ${ticket.ticketId} created successfully!`;
-          setTimeout(() => this.router.navigate(['/tickets']), 1500);
-        },
-        error: (err) => {
-          this.submitting = false;
-          this.error = err.error?.message || 'Failed to create ticket.';
-        }
-      });
-    }
+    this.submitting = true;
+    const req$ = this.isEdit
+      ? this.api.updateTicket(this.ticketId!, payload)
+      : this.api.createTicket(payload);
+
+    req$.subscribe({
+      next: (t) => {
+        this.toast.success(this.isEdit ? 'Ticket updated!' : `Ticket ${t.ticketNumber} created!`);
+        this.router.navigate(['/tickets', t.id]);
+      },
+      error: (err) => {
+        this.toast.error(err?.error?.message || 'An unexpected error occurred');
+        this.submitting = false;
+      }
+    });
   }
 
-  onReset(): void {
-    if (this.isEditMode && this.ticketId) {
+  resetForm() {
+    if (this.isEdit && this.ticketId) {
       this.loadTicket(this.ticketId);
     } else {
-      this.ticketForm.reset({
-        supportLevel: 'L1',
-        priority: 'P3_MEDIUM',
-        currentStatus: 'OPEN'
-      });
+      this.initForm();
     }
-    this.error = null;
-    this.successMessage = null;
+    this.toast.success('Form reset');
   }
 
-  isFieldInvalid(fieldName: string): boolean {
-    const field = this.ticketForm.get(fieldName);
-    return !!(field && field.invalid && (field.dirty || field.touched));
+  get isResolutionRequired(): boolean {
+    const s = this.form.get('currentStatus')?.value;
+    return s === 'Resolved' || s === 'Closed';
   }
 
-  getFieldError(fieldName: string): string {
-    const field = this.ticketForm.get(fieldName);
-    if (!field || !field.errors) return '';
-    if (field.errors['required']) return 'This field is required';
-    if (field.errors['minlength']) return `Minimum ${field.errors['minlength'].requiredLength} characters required`;
-    return 'Invalid value';
-  }
-  loadProjectOptions(): void {
-    this.projectService.getProjects(0, 200).subscribe({
-      next: r => this.projectOptions = r.data?.content ?? [],
-      error: () => {}
-    });
+  hasError(field: string): boolean {
+    const c = this.form.get(field);
+    return !!(c?.invalid && c?.touched);
   }
 
-  loadEmployeeOptions(): void {
-    this.employeeService.getEmployees(0, 200).subscribe({
-      next: r => this.employeeOptions = r.data?.content ?? [],
-      error: () => {}
-    });
+  getError(field: string): string {
+    const c = this.form.get(field);
+    if (!c?.touched) return '';
+    if (c.errors?.['required'])  return 'This field is required';
+    if (c.errors?.['minlength']) return `Minimum ${c.errors['minlength'].requiredLength} characters`;
+    return '';
   }
-
-
 }
