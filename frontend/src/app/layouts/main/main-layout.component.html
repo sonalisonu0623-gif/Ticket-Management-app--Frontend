@@ -1,0 +1,136 @@
+<div class="app-shell" [class.sidebar-collapsed]="!sidebarOpen()">
+
+  <!-- Loading Bar -->
+  @if (isLoading()) {
+    <div class="loading-bar"><div class="loading-bar-progress"></div></div>
+  }
+
+  <!-- ══ SIDEBAR ══════════════════════════════════════════ -->
+  <aside class="sidebar">
+
+    <!-- Brand -->
+    <div class="sidebar-header">
+      <div class="sidebar-logo-icon">
+        <span class="material-symbols-rounded">support_agent</span>
+      </div>
+      @if (sidebarOpen()) {
+        <div class="sidebar-brand-text">
+          <span class="sidebar-brand-name">TicketOps</span>
+          <span class="sidebar-brand-tag">Enterprise</span>
+        </div>
+      }
+      <button class="sidebar-collapse-btn" (click)="toggleSidebar()">
+        <span class="material-symbols-rounded">{{ sidebarOpen() ? 'menu_open' : 'menu' }}</span>
+      </button>
+    </div>
+
+    <!-- Project Switcher -->
+    @if (sidebarOpen() && store.projects().length > 0) {
+      <div class="project-switcher-wrap">
+        <div class="proj-dd-wrap" style="position:relative">
+          <button
+            class="project-switcher-btn"
+            [class.open]="projDropOpen()"
+            (click)="projDropOpen.update(v => !v); $event.stopPropagation()"
+          >
+            <div class="ps-icon"><span class="material-symbols-rounded">folder_special</span></div>
+            <div class="ps-info">
+              <span class="ps-label">Active Project</span>
+              <span class="ps-name">{{ store.activeProject()?.projectName ?? 'Select Project' }}</span>
+            </div>
+            <span class="material-symbols-rounded ps-chevron" [class.rotated]="projDropOpen()">expand_more</span>
+          </button>
+
+          @if (projDropOpen()) {
+            <div class="project-dropdown">
+              @for (p of store.projects(); track p.id) {
+                <button
+                  class="project-dropdown-item"
+                  [class.active]="p.id === store.activeId()"
+                  (click)="switchProject(p); $event.stopPropagation()"
+                >
+                  <span class="pd-dot"></span>
+                  <span>{{ p.projectName }}</span>
+                  @if (p.id === store.activeId()) {
+                    <span class="material-symbols-rounded pd-check">check</span>
+                  }
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+      @for (section of visibleSections; track section.label) {
+        <div class="nav-section">
+          @if (sidebarOpen()) {
+            <p class="nav-section-label">{{ section.label }}</p>
+          }
+          @for (item of section.items; track item.route) {
+            <a
+              [routerLink]="item.route"
+              routerLinkActive="nav-active"
+              class="nav-item"
+              [title]="!sidebarOpen() ? item.label : ''"
+            >
+              <span class="material-symbols-rounded nav-icon">{{ item.icon }}</span>
+              @if (sidebarOpen()) { <span class="nav-label">{{ item.label }}</span> }
+            </a>
+          }
+        </div>
+      }
+    </nav>
+
+    <!-- Footer: user info -->
+    <div class="sidebar-footer">
+      @if (sidebarOpen()) {
+        <div class="sidebar-user">
+          <div class="user-avatar">{{ auth.initials() }}</div>
+          <div class="user-info">
+            <span class="user-name">{{ auth.currentUser()?.username }}</span>
+            <span class="user-role-chip {{ auth.getRoleDisplayClass() }}">{{ auth.getRoleLabel() }}</span>
+          </div>
+          <button class="logout-btn" title="Sign out" (click)="logout()">
+            <span class="material-symbols-rounded">logout</span>
+          </button>
+        </div>
+      } @else {
+        <div style="display:flex;justify-content:center;padding:4px 0">
+          <div class="user-avatar" style="cursor:pointer" (click)="logout()" title="Sign out">
+            {{ auth.initials() }}
+          </div>
+        </div>
+      }
+    </div>
+  </aside>
+
+  <!-- ══ MAIN WRAPPER ════════════════════════════════════ -->
+  <div class="main-wrapper">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        @if (store.activeProject()) {
+          <div class="project-context-tag">
+            <span class="material-symbols-rounded">folder</span>
+            <span>{{ store.activeProject()?.projectName }}</span>
+          </div>
+        }
+      </div>
+
+      <div class="topbar-right">
+        <a routerLink="/profile" class="topbar-avatar" [title]="auth.currentUser()?.username ?? ''">
+          {{ auth.initials() }}
+        </a>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <main class="page-content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

@@ -1,31 +1,44 @@
 import { Routes } from '@angular/router';
-import { TicketListComponent }   from './components/ticket-list/ticket-list.component';
-import { TicketFormComponent }   from './components/ticket-form/ticket-form.component';
-import { TicketDetailComponent } from './components/ticket-detail/ticket-detail.component';
-import { DashboardComponent }    from './components/dashboard/dashboard.component';
-import { ProjectsComponent }     from './components/projects/projects.component';
-import { EmployeesComponent }    from './components/employees/employees.component';
-import { LoginComponent }        from './components/login/login.component';
-import { authGuard }             from './guards/auth.guard';
-import { unauthGuard }           from './guards/unauth.guard';
+import { authGuard, unauthGuard, adminGuard } from './core/guards/guards';
 
 export const routes: Routes = [
-  { path: 'login', component: LoginComponent, canActivate: [unauthGuard] },
-  
-  { 
-    path: '', 
-    canActivate: [authGuard],
+  // Auth
+  {
+    path: 'auth',
+    canActivate: [unauthGuard],
+    loadComponent: () => import('./layouts/auth/auth-layout.component').then(m => m.AuthLayoutComponent),
     children: [
-      { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
-      { path: 'dashboard', component: DashboardComponent },
-      { path: 'tickets', component: TicketListComponent },
-      { path: 'tickets/new', component: TicketFormComponent },
-      { path: 'tickets/edit/:id', component: TicketFormComponent },
-      { path: 'tickets/:id', component: TicketDetailComponent },
-      { path: 'projects', component: ProjectsComponent },
-      { path: 'employees', component: EmployeesComponent }
+      { path: 'login',    loadComponent: () => import('./features/auth/login/login.component').then(m => m.LoginComponent) },
+      { path: 'register', loadComponent: () => import('./features/auth/register/register.component').then(m => m.RegisterComponent) },
+      { path: '', redirectTo: 'login', pathMatch: 'full' }
     ]
   },
-  
+  // Main App
+  {
+    path: '',
+    canActivate: [authGuard],
+    loadComponent: () => import('./layouts/main/main-layout.component').then(m => m.MainLayoutComponent),
+    children: [
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: 'dashboard', loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent) },
+      // Tickets
+      { path: 'tickets',         loadComponent: () => import('./features/tickets/list/ticket-list.component').then(m => m.TicketListComponent) },
+      { path: 'tickets/new',     loadComponent: () => import('./features/tickets/form/ticket-form.component').then(m => m.TicketFormComponent) },
+      { path: 'tickets/:id',     loadComponent: () => import('./features/tickets/detail/ticket-detail.component').then(m => m.TicketDetailComponent) },
+      { path: 'tickets/:id/edit',loadComponent: () => import('./features/tickets/form/ticket-form.component').then(m => m.TicketFormComponent) },
+      // Configuration (Admin only)
+      {
+        path: 'config',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/configuration/configuration.component').then(m => m.ConfigurationComponent)
+      },
+      // Reports
+      { path: 'reports', loadComponent: () => import('./features/reports/reports.component').then(m => m.ReportsComponent) },
+      // Profile
+      { path: 'profile', loadComponent: () => import('./features/profile/profile.component').then(m => m.ProfileComponent) }
+    ]
+  },
+  // Error pages
+  { path: 'forbidden', loadComponent: () => import('./shared/components/forbidden/forbidden.component').then(m => m.ForbiddenComponent) },
   { path: '**', redirectTo: '/dashboard' }
 ];

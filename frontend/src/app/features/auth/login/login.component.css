@@ -1,0 +1,97 @@
+.login-card {
+  width: 100%; max-width: 420px;
+  background: #141929; border: 1px solid #1a2540;
+  border-radius: 16px; padding: 36px 32px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.6);
+  animation: fadeUp .35s cubic-bezier(.4,0,.2,1);
+}
+@keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+
+.login-head { text-align: center; margin-bottom: 28px; }
+.login-logo {
+  width: 54px; height: 54px; margin: 0 auto 14px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border-radius: 14px; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 28px rgba(59,130,246,.3);
+}
+.login-logo .material-symbols-rounded { font-size: 28px; color: white; font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+.login-title { margin: 0 0 4px; font-size: 22px; font-weight: 800; color: #e2e8f0; letter-spacing: -.5px; }
+.login-sub   { margin: 0; font-size: 13px; color: #8fa3bf; }
+
+.error-alert {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; margin-bottom: 16px;
+  background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.2);
+  border-radius: 8px; color: #ef4444; font-size: 13px;
+}
+.error-alert .material-symbols-rounded { font-size: 18px; flex-shrink: 0; }
+
+form { display: flex; flex-direction: column; gap: 16px; }
+.field-group { display: flex; flex-direction: column; gap: 5px; }
+.lbl { font-size: 11px; font-weight: 600; color: #8fa3bf; text-transform: uppercase; letter-spacing: .5px; }
+.input-ico-wrap {
+  position: relative; display: flex; align-items: center;
+  background: #0f1628; border: 1px solid #1a2540;
+  border-radius: 8px; transition: border-color .2s;
+}
+.input-ico-wrap:focus-within { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.1); }
+.input-ico-wrap.invalid { border-color: rgba(239,68,68,.5); }
+.ico { position: absolute; left: 11px; font-size: 17px; color: #445675; pointer-events: none; }
+.inp {
+  width: 100%; padding: 10px 12px 10px 36px;
+  background: transparent; border: none; outline: none;
+  color: #e2e8f0; font-size: 13.5px; font-family: inherit;
+}
+.inp::placeholder { color: #445675; }
+.toggle-pw {
+  position: absolute; right: 8px; background: none; border: none;
+  color: #445675; cursor: pointer; display: flex; padding: 4px;
+  transition: color .2s;
+}
+.toggle-pw:hover { color: #8fa3bf; }
+.toggle-pw .material-symbols-rounded { font-size: 18px; }
+.err-msg { margin: 0; font-size: 11px; color: #ef4444; }
+
+.btn-login {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 11px; margin-top: 4px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white; border: none; border-radius: 8px;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  transition: all .2s; font-family: inherit;
+}
+.btn-login:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(59,130,246,.4); }
+.btn-login:disabled { opacity: .6; cursor: not-allowed; }
+.btn-login .material-symbols-rounded { font-size: 18px; font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+.spin {
+  width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3);
+  border-top-color: white; border-radius: 50%; animation: spin .6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.footer-txt { text-align: center; font-size: 13px; color: #8fa3bf; margin: 0; }
+.link { color: #3b82f6; font-weight: 600; text-decoration: none; }
+.link:hover { text-decoration: underline; }
+
+.demo-note {
+  background: rgba(59,130,246,.05); border: 1px solid rgba(59,130,246,.12);
+  border-radius: 8px; padding: 12px; text-align: center;
+}
+.demo-note p { margin: 0 0 8px; font-size: 11px; color: #445675; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; }
+.demo-pills { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.pill {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  padding: 3px 9px; background: rgba(59,130,246,.08); color: #8fa3bf;
+  border-radius: 4px; border: 1px solid rgba(59,130,246,.12);
+}
+
+/* Used by register component */
+.inp-bare {
+  width: 100%; padding: 9px 12px;
+  background: #0f1628; border: 1px solid #1a2540;
+  border-radius: 8px; color: #e2e8f0; font-size: 13px;
+  outline: none; transition: border-color .2s, box-shadow .2s;
+  font-family: inherit; appearance: none;
+}
+.inp-bare::placeholder { color: #445675; }
+.inp-bare:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.1); }

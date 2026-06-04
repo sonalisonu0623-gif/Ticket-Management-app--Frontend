@@ -1,0 +1,212 @@
+<div class="page-wrapper">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="page-title-block">
+      <h1 class="page-title"><span class="material-symbols-rounded">confirmation_number</span>Tickets</h1>
+      <p class="page-subtitle">{{ totalItems() | number }} tickets total</p>
+    </div>
+    <div class="page-actions">
+      <a routerLink="/tickets/new" class="btn btn-primary">
+        <span class="material-symbols-rounded">add</span>New Ticket
+      </a>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="table-toolbar" style="border-radius:10px 10px 0 0;border-bottom:none">
+    <div class="search-wrap">
+      <span class="material-symbols-rounded search-icon">search</span>
+      <input type="text" class="search-input" placeholder="Search ticket number or keyword…"
+        [formControl]="filterForm.controls['search']"
+        (input)="onSearch(filterForm.value.search ?? '')" />
+    </div>
+    <button class="btn btn-secondary" [class.active-filter]="filterOpen()" (click)="filterOpen.update(v=>!v)">
+      <span class="material-symbols-rounded">tune</span>
+      Filters
+      @if (activeFilters > 0) { <span class="filter-count-badge">{{ activeFilters }}</span> }
+    </button>
+    @if (activeFilters > 0) {
+      <button class="btn btn-ghost btn-sm" (click)="resetFilters()">
+        <span class="material-symbols-rounded">filter_alt_off</span>Clear
+      </button>
+    }
+  </div>
+
+  <!-- Filter Bar -->
+  @if (filterOpen()) {
+    <div class="filter-bar" [formGroup]="filterForm">
+      <div class="filter-grid">
+        <div class="filter-field">
+          <label class="filter-label">Project</label>
+          <select class="filter-select" formControlName="projectId">
+            <option [ngValue]="null">All Projects</option>
+            @for (p of projects(); track p.id) {
+              <option [ngValue]="p.id">{{ p.projectName }}</option>
+            }
+          </select>
+        </div>
+        <div class="filter-field">
+          <label class="filter-label">Assigned To</label>
+          <select class="filter-select" formControlName="employeeId">
+            <option [ngValue]="null">All Employees</option>
+            @for (e of employees(); track e.id) {
+              <option [ngValue]="e.id">{{ e.employeeName }}</option>
+            }
+          </select>
+        </div>
+        <div class="filter-field">
+          <label class="filter-label">Priority</label>
+          <select class="filter-select" formControlName="priority">
+            <option value="">All Priorities</option>
+            @for (p of priorities; track p) { <option [value]="p">{{ p }}</option> }
+          </select>
+        </div>
+        <div class="filter-field">
+          <label class="filter-label">Status</label>
+          <select class="filter-select" formControlName="currentStatus">
+            <option value="">All Statuses</option>
+            @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
+          </select>
+        </div>
+        <div class="filter-field">
+          <label class="filter-label">Support Level</label>
+          <select class="filter-select" formControlName="supportLevel">
+            <option value="">All Levels</option>
+            @for (l of supportLevels; track l) { <option [value]="l">{{ l }}</option> }
+          </select>
+        </div>
+        <div class="filter-field" style="justify-content:flex-end">
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12.5px;color:#8fa3bf;padding-top:18px">
+            <input type="checkbox" formControlName="slaBreached" style="accent-color:#3b82f6;width:15px;height:15px" />
+            SLA Breached Only
+          </label>
+        </div>
+      </div>
+      <div class="filter-footer">
+        <button class="btn btn-primary btn-sm" (click)="applyFilters()">
+          <span class="material-symbols-rounded">check</span>Apply Filters
+        </button>
+        <button class="btn btn-ghost btn-sm" (click)="filterOpen.set(false)">Cancel</button>
+      </div>
+    </div>
+  }
+
+  <!-- Table Card -->
+  <div class="table-card" style="border-radius: {{filterOpen() ? '0 0 10px 10px' : '0 0 10px 10px'}}">
+    @if (loading()) {
+      @for (i of [1,2,3,4,5,6,7,8]; track i) {
+        <div class="skeleton skeleton-row" style="margin:4px 8px;border-radius:6px"></div>
+      }
+    } @else if (tickets().length === 0) {
+      <div class="empty-state">
+        <span class="material-symbols-rounded empty-icon">inbox</span>
+        <p class="empty-title">No tickets found</p>
+        <p class="empty-sub">Try adjusting your filters or create a new ticket</p>
+        <a routerLink="/tickets/new" class="btn btn-primary" style="margin-top:12px">
+          <span class="material-symbols-rounded">add</span>New Ticket
+        </a>
+      </div>
+    } @else {
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Ticket #</th>
+              <th>Project</th>
+              <th>Description</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Assigned</th>
+              <th>Level</th>
+              <th>SLA</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of tickets(); track t.id) {
+              @let sla = slaInfo(t);
+              <tr>
+                <td><a [routerLink]="['/tickets', t.id]" class="ticket-link">{{ t.ticketNumber }}</a></td>
+                <td><span class="proj-tag">{{ t.projectName }}</span></td>
+                <td><span class="desc-cell">{{ truncate(t.issueDescription) }}</span></td>
+                <td><span class="badge {{ priorityClass(t.priority) }}">{{ t.priority }}</span></td>
+                <td><span class="badge {{ statusClass(t.currentStatus) }}">{{ t.currentStatus }}</span></td>
+                <td>
+                  @if (t.assignedEmployeeName) {
+                    <div class="assignee">
+                      <div class="avatar">{{ initials(t.assignedEmployeeName) }}</div>
+                      <span style="font-size:12px">{{ t.assignedEmployeeName }}</span>
+                    </div>
+                  } @else { <span style="color:#445675;font-size:12px">—</span> }
+                </td>
+                <td><span class="level-tag">{{ t.supportLevel ?? '—' }}</span></td>
+                <td>
+                  <span [class]="sla.breached ? 'sla-breach' : 'sla-ok'">
+                    <span class="material-symbols-rounded">{{ sla.breached ? 'timer_off' : 'timer' }}</span>
+                    {{ sla.label }}
+                  </span>
+                </td>
+                <td class="date-cell">{{ formatDate(t.createdAt) }}</td>
+                <td>
+                  <div class="action-group">
+                    <a [routerLink]="['/tickets', t.id]" class="action-btn view" title="View">
+                      <span class="material-symbols-rounded">visibility</span>
+                    </a>
+                    <a [routerLink]="['/tickets', t.id, 'edit']" class="action-btn edit" title="Edit">
+                      <span class="material-symbols-rounded">edit</span>
+                    </a>
+                    @if (auth.isAdmin()) {
+                      <button class="action-btn delete" title="Delete" (click)="deleteTarget.set(t.id!)">
+                        <span class="material-symbols-rounded">delete</span>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (totalPages() > 1) {
+        <div class="pagination">
+          <button class="page-btn" [disabled]="currentPage() === 0" (click)="goToPage(0)">
+            <span class="material-symbols-rounded">first_page</span>
+          </button>
+          <button class="page-btn" [disabled]="currentPage() === 0" (click)="goToPage(currentPage()-1)">
+            <span class="material-symbols-rounded">chevron_left</span>
+          </button>
+          @for (p of pageNums; track p) {
+            <button class="page-btn" [class.active]="p === currentPage()" (click)="goToPage(p)">
+              {{ p + 1 }}
+            </button>
+          }
+          <button class="page-btn" [disabled]="currentPage() === totalPages()-1" (click)="goToPage(currentPage()+1)">
+            <span class="material-symbols-rounded">chevron_right</span>
+          </button>
+          <button class="page-btn" [disabled]="currentPage() === totalPages()-1" (click)="goToPage(totalPages()-1)">
+            <span class="material-symbols-rounded">last_page</span>
+          </button>
+          <span class="page-info">
+            {{ currentPage()*pageSize()+1 }}–{{ ((currentPage()+1)*pageSize()) < totalItems() ? (currentPage()+1)*pageSize() : totalItems() }}
+            of {{ totalItems() | number }}
+          </span>
+        </div>
+      }
+    }
+  </div>
+</div>
+
+<!-- Delete Confirm -->
+@if (deleteTarget() !== null) {
+  <app-confirm-dialog
+    title="Delete Ticket?"
+    message="This ticket will be permanently deleted. This action cannot be undone."
+    confirmLabel="Delete"
+    (confirm)="doDelete()"
+    (cancel)="deleteTarget.set(null)"
+  />
+}
