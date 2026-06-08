@@ -38,7 +38,7 @@
 
     <button class="btn btn-secondary"
             [class.active-filter]="filterOpen()"
-            (click)="filterOpen.update(v => !v)">
+            (click)="toggleFilter()">
 
       <span class="material-symbols-rounded">tune</span>
       Filters

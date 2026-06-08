@@ -166,7 +166,7 @@
     </div>
 
     <!-- Critical Tickets -->
-    @if (data()!.criticalOpenTickets?.length > 0) {
+    @if (data()!.criticalOpenTickets.length > 0) {
       <div class="card critical-panel">
         <div class="card-header">
           <h3 class="card-title" style="color:#ef4444">
@@ -220,7 +220,7 @@
         <a routerLink="/tickets" class="card-action">View all →</a>
       </div>
 
-      @if (data()!.recentTickets?.length === 0) {
+      @if (data()!.recentTickets.length === 0) {
         <div class="empty-state">
           <span class="material-symbols-rounded empty-icon">confirmation_number</span>
           <p class="empty-title">No tickets yet</p>

@@ -100,6 +100,10 @@ export class TicketListComponent implements OnInit {
       error: () => { this.toast.error('Failed to load tickets'); this.loading.set(false); }
     });
   }
+  
+  toggleFilter() {
+  this.filterOpen.update(v => !v);
+}
 
   onSearch(val: string): void { this.search$.next(val); }
   applyFilters(): void { this.currentPage.set(0); this.load(); this.filterOpen.set(false); }
