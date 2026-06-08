@@ -1,13 +1,19 @@
 <div class="login-card">
+
+  <!-- Header -->
   <div class="login-head">
     <div class="login-logo">
       <span class="material-symbols-rounded">support_agent</span>
     </div>
+
     <h1 class="login-title">TicketOps</h1>
     <p class="login-sub">Enterprise Support Platform</p>
   </div>
 
+  <!-- Form -->
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+
+    <!-- Error -->
     @if (errorMsg()) {
       <div class="error-alert">
         <span class="material-symbols-rounded">error</span>
@@ -15,49 +21,91 @@
       </div>
     }
 
+    <!-- Username -->
     <div class="field-group">
       <label class="lbl">Username or Email</label>
-      <div class="input-ico-wrap" [class.invalid]="f['usernameOrEmail'].invalid && f['usernameOrEmail'].touched">
+
+      <div class="input-ico-wrap"
+           [class.invalid]="f['usernameOrEmail'].invalid && f['usernameOrEmail'].touched">
+
         <span class="material-symbols-rounded ico">person</span>
-        <input formControlName="usernameOrEmail" type="text" class="inp"
-          placeholder="admin" autocomplete="username" />
+
+        <input
+          formControlName="usernameOrEmail"
+          type="text"
+          class="inp"
+          placeholder="admin"
+          autocomplete="username"
+        />
       </div>
+
       @if (f['usernameOrEmail'].invalid && f['usernameOrEmail'].touched) {
         <p class="err-msg">Username or email is required</p>
       }
     </div>
 
+    <!-- Password -->
     <div class="field-group">
       <label class="lbl">Password</label>
-      <div class="input-ico-wrap" [class.invalid]="f['password'].invalid && f['password'].touched">
+
+      <div class="input-ico-wrap"
+           [class.invalid]="f['password'].invalid && f['password'].touched">
+
         <span class="material-symbols-rounded ico">lock</span>
-        <input formControlName="password" [type]="showPw() ? 'text' : 'password'"
-          class="inp" placeholder="••••••••" autocomplete="current-password" />
-        <button type="button" class="toggle-pw" (click)="showPw.update(v=>!v)">
-          <span class="material-symbols-rounded">{{ showPw() ? 'visibility_off' : 'visibility' }}</span>
+
+        <input
+          formControlName="password"
+          [type]="showPw() ? 'text' : 'password'"
+          class="inp"
+          placeholder="••••••••"
+          autocomplete="current-password"
+        />
+
+        <button type="button"
+                class="toggle-pw"
+                (click)="showPw.update(v => !v)">
+          <span class="material-symbols-rounded">
+            {{ showPw() ? 'visibility_off' : 'visibility' }}
+          </span>
         </button>
+
       </div>
+
       @if (f['password'].invalid && f['password'].touched) {
-        <p class="err-msg">Password must be at least 6 characters</p>
+        <p class="err-msg">
+          Password must be at least 6 characters
+        </p>
       }
     </div>
 
+    <!-- Submit -->
     <button type="submit" class="btn-login" [disabled]="loading()">
-      @if (loading()) { <span class="spin"></span> Signing in… }
-      @else { <span class="material-symbols-rounded">login</span> Sign In }
+
+      @if (loading()) {
+        <span class="spin"></span> Signing in…
+      } @else {
+        <span class="material-symbols-rounded">login</span>
+        Sign In
+      }
+
     </button>
 
+    <!-- Footer -->
     <p class="footer-txt">
-      No account? <a routerLink="/register" class="link">Create one</a>
+      No account?
+      <a routerLink="/register" class="link">Create one</a>
     </p>
 
+    <!-- Demo -->
     <div class="demo-note">
       <p>Demo credentials</p>
+
       <div class="demo-pills">
         <span class="pill">admin / password</span>
         <span class="pill">l1_john / password</span>
         <span class="pill">user_test / password</span>
       </div>
     </div>
+
   </form>
 </div>
