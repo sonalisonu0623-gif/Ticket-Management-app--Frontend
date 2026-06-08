@@ -39,42 +39,40 @@
     </div>
   }
 
-  <!-- DATA (FIXED) -->
+  <!-- DATA -->
   @if (!loading() && data()) {
-
-    @let d = data();
 
     <!-- KPI -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px">
 
       <div class="report-kpi">
         <div class="rk-icon"><span class="material-symbols-rounded">confirmation_number</span></div>
-        <div class="rk-val">{{ d?.totalTickets }}</div>
+        <div class="rk-val">{{ data()?.totalTickets }}</div>
         <div class="rk-lbl">Total Tickets</div>
       </div>
 
       <div class="report-kpi">
         <div class="rk-icon"><span class="material-symbols-rounded">check_circle</span></div>
-        <div class="rk-val">{{ d?.resolvedTickets }}</div>
+        <div class="rk-val">{{ data()?.resolvedTickets }}</div>
         <div class="rk-lbl">Resolved</div>
       </div>
 
       <div class="report-kpi">
         <div class="rk-icon"><span class="material-symbols-rounded">timer_off</span></div>
-        <div class="rk-val">{{ d?.slaBreachedTickets }}</div>
+        <div class="rk-val">{{ data()?.slaBreachedTickets }}</div>
         <div class="rk-lbl">SLA Breached</div>
       </div>
 
       <div class="report-kpi">
         <div class="rk-icon"><span class="material-symbols-rounded">verified</span></div>
-        <div class="rk-val">{{ d?.slaComplianceRate | number:'1.0-1' }}%</div>
+        <div class="rk-val">{{ data()?.slaComplianceRate | number:'1.0-1' }}%</div>
         <div class="rk-lbl">SLA Compliance</div>
       </div>
 
       <div class="report-kpi">
         <div class="rk-icon"><span class="material-symbols-rounded">timer</span></div>
         <div class="rk-val">
-          {{ d?.avgResolutionHours != null ? (d?.avgResolutionHours | number:'1.1-1') + 'h' : '—' }}
+          {{ data()?.avgResolutionHours != null ? (data()?.avgResolutionHours | number:'1.1-1') + 'h' : '—' }}
         </div>
         <div class="rk-lbl">Avg Resolution</div>
       </div>
@@ -145,7 +143,7 @@
     </div>
 
     <!-- EMPLOYEE TABLE -->
-    @if (d?.employeePerformance?.length > 0) {
+    @if (data()?.employeePerformance?.length > 0) {
 
       <div class="card">
         <div class="card-header">
@@ -172,13 +170,13 @@
             </thead>
 
             <tbody>
-              @for (ep of d.employeePerformance; track ep.employeeId) {
+              @for (ep of data()?.employeePerformance; track ep.employeeId) {
 
                 <tr>
 
                   <td>
                     <div style="display:flex;align-items:center;gap:8px">
-                      <div class="avatar">{{ ep.employeeName?.charAt(0) }}</div>
+                      <div class="avatar">{{ ep.employeeName?.charAt(0) || '?' }}</div>
                       <span>{{ ep.employeeName }}</span>
                     </div>
                   </td>
