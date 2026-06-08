@@ -1,124 +1,185 @@
-<div *ngIf="!authService.isAuthenticated()" class="auth-wrapper">
-  <router-outlet></router-outlet>
-</div>
+<!-- Loading Bar -->
+@if (isLoading()) {
+  <div class="loading-bar"><div class="loading-bar-progress"></div></div>
+}
 
-<div *ngIf="authService.isAuthenticated()" class="app-shell" [class.sidebar-collapsed]="sidebarCollapsed()">
-
-  <div class="sidebar-overlay" (click)="toggleSidebar()" *ngIf="!sidebarCollapsed()"></div>
-
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      <div class="sidebar-logo">
-        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-          <rect width="28" height="28" rx="6" fill="var(--accent)"/>
-          <path d="M7 9h14M7 14h10M7 19h7" stroke="white" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        <span class="sidebar-brand">Ticket Management</span>
+<!-- Toast Container -->
+<div class="toast-container">
+  @for (toast of toasts(); track toast.id) {
+    <div class="toast toast-{{ toast.type }}">
+      <div class="toast-icon">
+        <span class="material-symbols-rounded">{{ toastIcon(toast.type) }}</span>
       </div>
-      <button class="sidebar-collapse-btn" (click)="toggleSidebar()" title="Toggle sidebar">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-        </svg>
+      <div class="toast-content">
+        <div class="toast-title">{{ toast.title }}</div>
+        @if (toast.message) { <div class="toast-message">{{ toast.message }}</div> }
+      </div>
+      <button class="toast-close" (click)="toastSvc.dismiss(toast.id)">
+        <span class="material-symbols-rounded">close</span>
       </button>
     </div>
-
-    <nav class="sidebar-nav">
-      <div class="nav-section-label">MAIN</div>
-
-      <a routerLink="/dashboard" routerLinkActive="nav-active" class="nav-item">
-        <svg class="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-          <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-        </svg>
-        <span class="nav-label">Dashboard</span>
-      </a>
-
-      <a routerLink="/tickets" routerLinkActive="nav-active" [routerLinkActiveOptions]="{exact: false}" class="nav-item">
-        <svg class="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
-        </svg>
-        <span class="nav-label">Tickets</span>
-      </a>
-
-      <div class="nav-section-label">MANAGE</div>
-
-      <a routerLink="/projects" routerLinkActive="nav-active" class="nav-item">
-        <svg class="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
-        </svg>
-        <span class="nav-label">Projects</span>
-      </a>
-
-      <a routerLink="/employees" routerLinkActive="nav-active" class="nav-item">
-        <svg class="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 00-3-3.87"/>
-          <path d="M16 3.13a4 4 0 010 7.75"/>
-        </svg>
-        <span class="nav-label">Employees</span>
-      </a>
-    </nav>
-
-    <div class="sidebar-footer">
-      <div class="sidebar-user" *ngIf="authService.currentUser() as user" style="position: relative; width: 100%;">
-        <div class="user-avatar" style="text-transform: uppercase;">
-          {{ user.username.charAt(0) }}
-        </div>
-        <div class="user-info" style="flex: 1; min-width: 0;">
-          <span class="user-name" style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            {{ user.username }}
-          </span>
-          <span class="user-role" style="display: block; font-size: 11px; opacity: 0.75;">
-            {{ user.role }}
-          </span>
-        </div>
-        <button (click)="executeSignout()" class="topbar-icon-btn" title="Sign Out Session" style="margin-left: auto; border: none; background: transparent; cursor: pointer; color: inherit; padding: 4px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-            <polyline points="16 17 21 12 16 7"></polyline>
-            <line x1="21" y1="12" x2="9" y2="12"></line>
-          </svg>
-        </button>
-      </div>
-    </div>
-  </aside>
-
-  <div class="main-wrapper">
-    <header class="topbar">
-      <div class="topbar-left">
-        <button class="topbar-menu-btn" (click)="toggleSidebar()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-          </svg>
-        </button>
-      </div>
-      
-      <div class="topbar-right">
-        <button class="theme-toggle" (click)="themeService.toggle()">
-          <svg *ngIf="themeService.isDark()" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="5"/>
-            <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-            <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-          </svg>
-          <svg *ngIf="!themeService.isDark()" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
-          </svg>
-          <span class="theme-label">{{ themeService.isDark() ? 'Light' : 'Dark' }}</span>
-        </button>
-
-        <div class="topbar-avatar" *ngIf="authService.currentUser() as user" style="text-transform: uppercase;">
-          {{ user.username.charAt(0) }}
-        </div>
-      </div>
-    </header>
-
-    <main class="page-content">
-      <router-outlet></router-outlet>
-    </main>
-  </div>
+  }
 </div>
+
+<!-- Auth-only view -->
+@if (!authService.isAuthenticated()) {
+  <div class="auth-wrapper">
+    <router-outlet></router-outlet>
+  </div>
+}
+
+<!-- Main App Shell -->
+@if (authService.isAuthenticated()) {
+  <div class="app-shell" [class.sidebar-collapsed]="sidebarCollapsed()">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <!-- Brand -->
+      <div class="sidebar-header">
+        <div class="sidebar-logo-icon">
+          <span class="material-symbols-rounded">support_agent</span>
+        </div>
+        @if (!sidebarCollapsed()) {
+          <div class="sidebar-brand-text">
+            <span class="sidebar-brand-name">TicketOps</span>
+            <span class="sidebar-brand-tag">Enterprise</span>
+          </div>
+        }
+        <button class="sidebar-collapse-btn" (click)="toggleSidebar()">
+          <span class="material-symbols-rounded">{{ sidebarCollapsed() ? 'menu' : 'menu_open' }}</span>
+        </button>
+      </div>
+
+      <!-- Project Switcher -->
+      @if (!sidebarCollapsed() && store.projects().length > 0) {
+        <div class="project-switcher-wrap proj-switcher-area">
+          <button class="project-switcher-btn" [class.open]="projDropOpen()"
+            (click)="toggleProjDrop(); $event.stopPropagation()">
+            <div class="ps-icon"><span class="material-symbols-rounded">folder_special</span></div>
+            <div class="ps-info">
+              <span class="ps-label">Active Project</span>
+              <span class="ps-name">{{ store.activeProject()?.projectName ?? 'Select Project' }}</span>
+            </div>
+            <span class="material-symbols-rounded ps-chevron" [class.rotated]="projDropOpen()">expand_more</span>
+          </button>
+          @if (projDropOpen()) {
+            <div class="project-dropdown">
+              @for (p of store.projects(); track p.id) {
+                <button class="project-dropdown-item" [class.active]="p.id === store.activeId()"
+                  (click)="switchProject(p); $event.stopPropagation()">
+                  <span class="pd-dot"></span>
+                  <span>{{ p.projectName }}</span>
+                  @if (p.id === store.activeId()) {
+                    <span class="material-symbols-rounded pd-check">check</span>
+                  }
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Navigation -->
+      <nav class="sidebar-nav">
+        <!-- Overview -->
+        <div class="nav-section">
+          @if (!sidebarCollapsed()) { <p class="nav-section-label">Overview</p> }
+          <a routerLink="/dashboard" routerLinkActive="nav-active" class="nav-item" title="Dashboard">
+            <span class="material-symbols-rounded nav-icon">dashboard</span>
+            @if (!sidebarCollapsed()) { <span class="nav-label">Dashboard</span> }
+          </a>
+        </div>
+
+        <!-- Ticketing -->
+        <div class="nav-section">
+          @if (!sidebarCollapsed()) { <p class="nav-section-label">Ticketing</p> }
+          <a routerLink="/tickets" routerLinkActive="nav-active" [routerLinkActiveOptions]="{exact:true}" class="nav-item" title="All Tickets">
+            <span class="material-symbols-rounded nav-icon">confirmation_number</span>
+            @if (!sidebarCollapsed()) { <span class="nav-label">All Tickets</span> }
+          </a>
+          <a routerLink="/tickets/new" routerLinkActive="nav-active" class="nav-item" title="New Ticket">
+            <span class="material-symbols-rounded nav-icon">add_circle_outline</span>
+            @if (!sidebarCollapsed()) { <span class="nav-label">New Ticket</span> }
+          </a>
+        </div>
+
+        <!-- Analytics -->
+        <div class="nav-section">
+          @if (!sidebarCollapsed()) { <p class="nav-section-label">Analytics</p> }
+          <a routerLink="/reports" routerLinkActive="nav-active" class="nav-item" title="Reports">
+            <span class="material-symbols-rounded nav-icon">bar_chart</span>
+            @if (!sidebarCollapsed()) { <span class="nav-label">Reports</span> }
+          </a>
+        </div>
+
+        <!-- Admin -->
+        @if (authService.isAdmin()) {
+          <div class="nav-section">
+            @if (!sidebarCollapsed()) { <p class="nav-section-label">Administration</p> }
+            <a routerLink="/configuration" routerLinkActive="nav-active" class="nav-item" title="Configuration">
+              <span class="material-symbols-rounded nav-icon">settings</span>
+              @if (!sidebarCollapsed()) { <span class="nav-label">Configuration</span> }
+            </a>
+          </div>
+        }
+      </nav>
+
+      <!-- Sidebar Footer -->
+      <div class="sidebar-footer">
+        @if (!sidebarCollapsed()) {
+          <div class="sidebar-user">
+            <div class="user-avatar">{{ authService.initials() }}</div>
+            <div class="user-info">
+              <span class="user-name">{{ authService.currentUser()?.username }}</span>
+              <span class="user-role-chip {{ authService.getRoleClass() }}">{{ authService.getRoleLabel() }}</span>
+            </div>
+            <a routerLink="/profile" class="logout-btn" title="Profile">
+              <span class="material-symbols-rounded">account_circle</span>
+            </a>
+            <button class="logout-btn" title="Sign out" (click)="executeSignout()">
+              <span class="material-symbols-rounded">logout</span>
+            </button>
+          </div>
+        } @else {
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:4px 0">
+            <div class="user-avatar" style="cursor:pointer" routerLink="/profile">{{ authService.initials() }}</div>
+            <button class="logout-btn" (click)="executeSignout()" title="Sign out">
+              <span class="material-symbols-rounded">logout</span>
+            </button>
+          </div>
+        }
+      </div>
+    </aside>
+
+    <!-- MAIN AREA -->
+    <div class="main-wrapper">
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="topbar-menu-btn" (click)="toggleSidebar()">
+            <span class="material-symbols-rounded">{{ sidebarCollapsed() ? 'menu' : 'menu_open' }}</span>
+          </button>
+          @if (store.activeProject()) {
+            <div class="project-context-tag">
+              <span class="material-symbols-rounded">folder</span>
+              <span>{{ store.activeProject()?.projectName }}</span>
+            </div>
+          }
+        </div>
+        <div class="topbar-right">
+          <button class="theme-toggle" (click)="themeService.toggle()" title="Toggle theme">
+            <span class="material-symbols-rounded">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>
+          </button>
+          <a routerLink="/profile" class="topbar-avatar" [title]="authService.currentUser()?.username ?? ''">
+            {{ authService.initials() }}
+          </a>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <main class="page-content">
+        <router-outlet></router-outlet>
+      </main>
+    </div>
+  </div>
+}

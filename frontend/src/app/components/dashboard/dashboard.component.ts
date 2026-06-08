@@ -1,70 +1,69 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { RouterLink } from '@angular/router';
 import { ApiService } from '../../services/api.service';
-import { Ticket } from '../../models/models';
+import { ProjectStore } from '../../state/project.store';
+import { DashboardDTO, Ticket } from '../../models/models';
+import { priorityClass, statusClass, formatDate, slaInfo, truncate, initials } from '../../models/utils';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.css'],
+  styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
-  loading = true;
-  recentTickets: Ticket[] = [];
+  private readonly api = inject(ApiService);
+  readonly store       = inject(ProjectStore);
 
-  stats = {
-    total: 0,
-    open: 0,
-    inProgress: 0,
-    resolved: 0,
-    closed: 0,
-  };
+  loading = signal(true);
+  data    = signal<DashboardDTO | null>(null);
 
-  constructor(private api: ApiService) {}
+  readonly priorityClass = priorityClass;
+  readonly statusClass   = statusClass;
+  readonly formatDate    = formatDate;
+  readonly slaInfo       = slaInfo;
+  readonly truncate      = truncate;
+  readonly initials      = initials;
 
-  ngOnInit() {
-    this.loadDashboard();
-  }
+  readonly statusBars = computed(() => {
+    const d = this.data(); if (!d) return [];
+    const total = d.totalTickets || 1;
+    return Object.entries(d.ticketsByStatus ?? {})
+      .map(([label, count]) => ({ label, count, pct: Math.round((count / total) * 100), color: this.statusColor(label) }))
+      .sort((a, b) => b.count - a.count);
+  });
 
-  loadDashboard() {
-    this.loading = true;
-    forkJoin({
-      recent:     this.api.getTickets({}, 0, 5, 'createdAt', 'desc'),
-      open:       this.api.getTickets({ currentStatus: 'Open' }, 0, 1),
-      inProgress: this.api.getTickets({ currentStatus: 'In Progress' }, 0, 1),
-      resolved:   this.api.getTickets({ currentStatus: 'Resolved' }, 0, 1),
-      closed:     this.api.getTickets({ currentStatus: 'Closed' }, 0, 1),
-    }).subscribe({
-      next: (results) => {
-        this.recentTickets      = results.recent.data.content;
-        this.stats.total        = results.recent.data.totalElements;
-        this.stats.open         = results.open.data.totalElements;
-        this.stats.inProgress   = results.inProgress.data.totalElements;
-        this.stats.resolved     = results.resolved.data.totalElements;
-        this.stats.closed       = results.closed.data.totalElements;
-        this.loading = false;
-      },
-      error: () => { this.loading = false; }
+  readonly priorityBars = computed(() => {
+    const d = this.data(); if (!d) return [];
+    const total = d.totalTickets || 1;
+    const order = ['P1 - Critical','P2 - High','P3 - Medium','P4 - Low'];
+    return Object.entries(d.ticketsByPriority ?? {})
+      .map(([label, count]) => ({ label, count, pct: Math.round((count / total) * 100), color: this.priorityColor(label) }))
+      .sort((a, b) => order.indexOf(a.label) - order.indexOf(b.label));
+  });
+
+  ngOnInit(): void { this.load(); }
+
+  load(): void {
+    this.loading.set(true);
+    this.api.getDashboard(this.store.activeId() ?? undefined).subscribe({
+      next: d => { this.data.set(d); this.loading.set(false); },
+      error: () => this.loading.set(false)
     });
   }
 
-  priorityClass(p?: string): string {
-    if (!p) return '';
-    if (p.startsWith('P1')) return 'badge-p1';
-    if (p.startsWith('P2')) return 'badge-p2';
-    if (p.startsWith('P3')) return 'badge-p3';
-    return 'badge-p4';
+  statusColor(s: string): string {
+    const m: Record<string,string> = { 'Open':'#3b82f6','In Progress':'#f59e0b','Pending':'#8b5cf6','Resolved':'#10b981','Closed':'#64748b','Escalated':'#ef4444' };
+    return m[s] ?? '#64748b';
   }
-
-  statusClass(s?: string): string {
-    const map: Record<string, string> = {
-      'Open': 'status-open', 'In Progress': 'status-progress',
-      'On Hold': 'status-hold', 'Resolved': 'status-resolved', 'Closed': 'status-closed'
-    };
-    return map[s ?? ''] ?? '';
+  priorityColor(p: string): string {
+    const m: Record<string,string> = { 'P1 - Critical':'#ef4444','P2 - High':'#f59e0b','P3 - Medium':'#3b82f6','P4 - Low':'#10b981' };
+    return m[p] ?? '#64748b';
+  }
+  complianceColor(): string {
+    const r = this.data()?.slaComplianceRate ?? 100;
+    return r >= 90 ? '#10b981' : r >= 70 ? '#f59e0b' : '#ef4444';
   }
 }

@@ -1,163 +1,121 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
-import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
-import { Subject } from 'rxjs';
-import { debounceTime, takeUntil } from 'rxjs/operators';
-import { SpinnerComponent } from '../shared/spinner.component';
+import { RouterLink, ActivatedRoute } from '@angular/router';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../services/api.service';
+import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
-import { Ticket, Project, Employee, TicketFilter } from '../../models/models';
+import { ProjectStore } from '../../state/project.store';
+import { Ticket, Employee, Project, PRIORITIES, STATUSES, SUPPORT_LEVELS } from '../../models/models';
+import { priorityClass, statusClass, formatDate, slaInfo, truncate, initials } from '../../models/utils';
 
 @Component({
   selector: 'app-ticket-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, ReactiveFormsModule, SpinnerComponent],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule],
   templateUrl: './ticket-list.component.html',
+  styleUrls: ['./ticket-list.component.css']
 })
-export class TicketListComponent implements OnInit, OnDestroy {
-  tickets: Ticket[] = [];
-  projects: Project[] = [];
-  employees: Employee[] = [];
-  filterForm!: FormGroup;
+export class TicketListComponent implements OnInit {
+  private api     = inject(ApiService);
+  readonly auth   = inject(AuthService);
+  private toast   = inject(ToastService);
+  private store   = inject(ProjectStore);
+  private route   = inject(ActivatedRoute);
+  private fb      = inject(FormBuilder);
 
-  loading = false;
-  totalElements = 0;
-  totalPages = 0;
-  currentPage = 0;
-  pageSize = 10;
-  sortBy = 'createdAt';
-  sortDir = 'desc';
+  loading      = signal(true);
+  tickets      = signal<Ticket[]>([]);
+  employees    = signal<Employee[]>([]);
+  projects     = signal<Project[]>([]);
+  totalItems   = signal(0);
+  totalPages   = signal(0);
+  currentPage  = signal(0);
+  pageSize     = signal(15);
+  filterOpen   = signal(false);
+  deleteTarget = signal<number | null>(null);
 
-  priorities    = ['P1 - Critical', 'P2 - High', 'P3 - Medium', 'P4 - Low'];
-  supportLevels = ['L1', 'L2', 'L3'];
-  statuses      = ['Open', 'In Progress', 'On Hold', 'Resolved', 'Closed'];
+  readonly priorities    = PRIORITIES;
+  readonly statuses      = STATUSES;
+  readonly supportLevels = SUPPORT_LEVELS;
+  readonly priorityClass = priorityClass;
+  readonly statusClass   = statusClass;
+  readonly formatDate    = formatDate;
+  readonly slaInfo       = slaInfo;
+  readonly truncate      = truncate;
+  readonly initials      = initials;
 
-  private destroy$ = new Subject<void>();
+  private search$ = new Subject<string>();
 
-  constructor(
-    private api: ApiService,
-    private toast: ToastService,
-    private fb: FormBuilder
-  ) {}
+  filterForm = this.fb.group({
+    search: [''], projectId: [null as number|null], employeeId: [null as number|null],
+    priority: [''], currentStatus: [''], supportLevel: [''], slaBreached: [false]
+  });
 
-  ngOnInit() {
-    this.filterForm = this.fb.group({
-      ticketNumber:  [''],
-      projectId:     [''],
-      employeeId:    [''],
-      priority:      [''],
-      currentStatus: [''],
-      supportLevel:  ['']
-    });
-
-    this.api.getProjects().subscribe({ next: p => this.projects = p });
-    this.api.getEmployees().subscribe({ next: e => this.employees = e });
-    this.loadTickets();
-
-    // Use debounceTime only — no distinctUntilChanged on objects (it compares by reference)
-    this.filterForm.valueChanges.pipe(
-      debounceTime(400),
-      takeUntil(this.destroy$)
-    ).subscribe(() => {
-      this.currentPage = 0;
-      this.loadTickets();
-    });
+  get activeFilters(): number {
+    const v = this.filterForm.value;
+    return [v.projectId, v.employeeId, v.priority, v.currentStatus, v.supportLevel, v.slaBreached].filter(Boolean).length;
   }
 
-  ngOnDestroy() {
-    this.destroy$.next();
-    this.destroy$.complete();
+  get pageNums(): number[] {
+    const total = this.totalPages(), cur = this.currentPage();
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i);
+    const pages = new Set([0, total - 1, cur, Math.max(0, cur-1), Math.min(total-1, cur+1)]);
+    return [...pages].sort((a, b) => a - b);
   }
 
-  loadTickets() {
-    this.loading = true;
-    const f = this.filterForm.value;
-    const filter: TicketFilter = {
-      ticketNumber:  f.ticketNumber  || undefined,
-      projectId:     f.projectId     ? +f.projectId  : undefined,
-      employeeId:    f.employeeId    ? +f.employeeId : undefined,
-      priority:      f.priority      || undefined,
-      currentStatus: f.currentStatus || undefined,
-      supportLevel:  f.supportLevel  || undefined,
+  constructor() {
+    this.search$.pipe(debounceTime(400), distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe(() => { this.currentPage.set(0); this.load(); });
+  }
+
+  ngOnInit(): void {
+    const qp = this.route.snapshot.queryParams;
+    if (qp['status'])     this.filterForm.patchValue({ currentStatus: qp['status'] });
+    if (qp['priority'])   this.filterForm.patchValue({ priority: qp['priority'] });
+    if (qp['slaBreached']) this.filterForm.patchValue({ slaBreached: true });
+    const pid = this.store.activeId();
+    if (pid) this.filterForm.patchValue({ projectId: pid });
+    this.load();
+    this.api.getEmployees().subscribe(e => this.employees.set(e));
+    this.api.getProjects().subscribe(p => this.projects.set(p));
+  }
+
+  load(): void {
+    this.loading.set(true);
+    const v = this.filterForm.value;
+    const filter = {
+      ticketNumber:  v.search || undefined, projectId: v.projectId ?? undefined,
+      employeeId:    v.employeeId ?? undefined, priority: v.priority || undefined,
+      currentStatus: v.currentStatus || undefined, supportLevel: v.supportLevel || undefined,
+      slaBreached:   v.slaBreached || undefined
     };
-
-    this.api.getTickets(filter, this.currentPage, this.pageSize, this.sortBy, this.sortDir).subscribe({
-      next: (res) => {
-        this.tickets       = res.data.content;
-        this.totalElements = res.data.totalElements;
-        this.totalPages    = res.data.totalPages;
-        this.loading       = false;
+    this.api.getTickets(filter, this.currentPage(), this.pageSize()).subscribe({
+      next: res => {
+        if (res.success) { this.tickets.set(res.data.content); this.totalItems.set(res.data.totalElements); this.totalPages.set(res.data.totalPages); }
+        this.loading.set(false);
       },
-      error: () => {
-        this.toast.error('Failed to load tickets');
-        this.loading = false;
-      }
+      error: () => { this.toast.error('Failed to load tickets'); this.loading.set(false); }
     });
   }
 
-  deleteTicket(id: number, ticketNumber: string) {
-    if (!confirm(`Delete ${ticketNumber}? This action cannot be undone.`)) return;
+  onSearch(val: string): void { this.search$.next(val); }
+  applyFilters(): void { this.currentPage.set(0); this.load(); this.filterOpen.set(false); }
+  resetFilters(): void {
+    this.filterForm.reset();
+    const pid = this.store.activeId();
+    if (pid) this.filterForm.patchValue({ projectId: pid });
+    this.currentPage.set(0); this.load();
+  }
+  goToPage(p: number): void { this.currentPage.set(p); this.load(); }
+
+  doDelete(): void {
+    const id = this.deleteTarget(); if (!id) return;
     this.api.deleteTicket(id).subscribe({
-      next: () => { this.toast.success(`${ticketNumber} deleted`); this.loadTickets(); },
+      next: () => { this.toast.success('Ticket deleted'); this.deleteTarget.set(null); this.load(); },
       error: () => this.toast.error('Failed to delete ticket')
     });
-  }
-
-  onPageChange(page: number) {
-    if (page < 0 || page >= this.totalPages) return;
-    this.currentPage = page;
-    this.loadTickets();
-  }
-
-  onSort(field: string) {
-    this.sortDir = this.sortBy === field ? (this.sortDir === 'asc' ? 'desc' : 'asc') : 'desc';
-    this.sortBy  = field;
-    this.loadTickets();
-  }
-
-  clearFilters() {
-    this.filterForm.reset({
-      ticketNumber: '', projectId: '', employeeId: '',
-      priority: '', currentStatus: '', supportLevel: ''
-    });
-  }
-
-  get pages(): number[] {
-    const total = this.totalPages;
-    const cur   = this.currentPage;
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i);
-    const pages: number[] = [0];
-    if (cur > 2) pages.push(-1);
-    for (let i = Math.max(1, cur - 1); i <= Math.min(total - 2, cur + 1); i++) pages.push(i);
-    if (cur < total - 3) pages.push(-1);
-    pages.push(total - 1);
-    return pages;
-  }
-
-  priorityClass(p?: string): string {
-    if (!p) return '';
-    if (p.startsWith('P1')) return 'badge-p1';
-    if (p.startsWith('P2')) return 'badge-p2';
-    if (p.startsWith('P3')) return 'badge-p3';
-    return 'badge-p4';
-  }
-
-  statusClass(s?: string): string {
-    const map: Record<string, string> = {
-      'Open': 'status-open', 'In Progress': 'status-progress',
-      'On Hold': 'status-hold', 'Resolved': 'status-resolved', 'Closed': 'status-closed'
-    };
-    return map[s ?? ''] ?? '';
-  }
-
-  sortIcon(field: string): string {
-    if (this.sortBy !== field) return '↕';
-    return this.sortDir === 'asc' ? '↑' : '↓';
-  }
-
-  truncate(text: string | undefined, len = 60): string {
-    if (!text) return '';
-    return text.length > len ? text.slice(0, len) + '…' : text;
   }
 }

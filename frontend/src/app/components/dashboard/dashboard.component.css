@@ -1,18 +1,60 @@
-.dash-grid { display: grid; grid-template-columns: 1fr 360px; gap: 16px; }
-.recent-list { }
-.recent-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid var(--border); gap: 12px; transition: background 0.12s; }
-.recent-item:last-child { border-bottom: none; }
-.recent-item:hover { background: var(--bg-card-hover); }
-.recent-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
-.recent-desc { font-size: 12.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.recent-meta { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-.quick-action { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; border: 1px solid var(--border); color: var(--text-primary); text-decoration: none; transition: all 0.15s; cursor: pointer; }
-.quick-action:hover { border-color: var(--border-hover); background: var(--bg-card-hover); }
-.qa-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.qa-title { font-size: 13.5px; font-weight: 600; }
-.qa-sub { font-size: 12px; color: var(--text-muted); }
-.qa-arrow { margin-left: auto; color: var(--text-muted); }
+.analytics-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 280px;
+  gap: 16px;
+  margin-bottom: 16px;
+}
 
-@media (max-width: 900px) {
-  .dash-grid { grid-template-columns: 1fr; }
+.dist-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+.dist-row:last-child { margin-bottom: 0; }
+.dist-meta { display: flex; align-items: center; gap: 7px; font-size: 12.5px; }
+.dist-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.dist-name { flex: 1; color: #8fa3bf; }
+.dist-count { font-weight: 700; color: #e2e8f0; min-width: 20px; text-align: right; }
+.dist-pct { color: #445675; min-width: 34px; text-align: right; font-size: 11.5px; }
+.dist-track { height: 5px; background: #1a2540; border-radius: 3px; overflow: hidden; }
+.dist-fill { height: 100%; border-radius: 3px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+
+/* SLA Compliance ring */
+.sla-compliance-body { display: flex; align-items: center; gap: 20px; }
+.compliance-ring-wrap { position: relative; flex-shrink: 0; }
+.compliance-ring { width: 110px; height: 110px; }
+.compliance-label {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  text-align: center;
+}
+.compliance-pct { display: block; font-size: 18px; font-weight: 800; line-height: 1.1; }
+.compliance-sub { display: block; font-size: 9.5px; color: #445675; text-transform: uppercase; letter-spacing: .5px; margin-top: 1px; }
+.compliance-stats { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.cs-row { display: flex; justify-content: space-between; font-size: 12.5px; }
+.cs-key { color: #8fa3bf; }
+.cs-val { font-weight: 600; color: #e2e8f0; }
+
+/* Critical Panel */
+.critical-panel { border-color: rgba(239,68,68,.2); background: rgba(239,68,68,.02); margin-bottom: 16px; }
+.critical-count {
+  background: #ef4444; color: white; font-size: 10px; font-weight: 700;
+  padding: 1px 7px; border-radius: 10px;
+}
+.critical-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.critical-card {
+  display: block; background: #1a0f0f; border: 1px solid rgba(239,68,68,.2);
+  border-radius: 8px; padding: 12px 14px; text-decoration: none;
+  transition: border-color .2s;
+}
+.critical-card:hover { border-color: rgba(239,68,68,.4); }
+.cc-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+.cc-desc { font-size: 12.5px; color: #8fa3bf; line-height: 1.4; margin: 0 0 10px; }
+.cc-foot { display: flex; align-items: center; justify-content: space-between; }
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+@media (max-width: 1100px) {
+  .analytics-row { grid-template-columns: 1fr 1fr; }
+  .analytics-row .card:last-child { grid-column: span 2; }
+}
+@media (max-width: 700px) {
+  .analytics-row { grid-template-columns: 1fr; }
+  .analytics-row .card:last-child { grid-column: span 1; }
+  .sla-compliance-body { flex-direction: column; align-items: flex-start; }
 }

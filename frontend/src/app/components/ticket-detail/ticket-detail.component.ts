@@ -1,57 +1,39 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, ActivatedRoute, Router } from '@angular/router';
-import { SpinnerComponent } from '../shared/spinner.component';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { Ticket } from '../../models/models';
+import { priorityClass, statusClass, formatDateTime, slaInfo, initials } from '../../models/utils';
 
 @Component({
   selector: 'app-ticket-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, SpinnerComponent],
+  imports: [CommonModule, RouterLink],
   templateUrl: './ticket-detail.component.html',
+  styleUrls: ['./ticket-detail.component.css']
 })
 export class TicketDetailComponent implements OnInit {
-  ticket?: Ticket;
-  loading = true;
+  private api    = inject(ApiService);
+  readonly auth  = inject(AuthService);
+  private route  = inject(ActivatedRoute);
+  private toast  = inject(ToastService);
 
-  constructor(
-    private api: ApiService,
-    private toast: ToastService,
-    private route: ActivatedRoute,
-    private router: Router
-  ) {}
+  loading = signal(true);
+  ticket  = signal<Ticket | null>(null);
 
-  ngOnInit() {
-    const id = +this.route.snapshot.params['id'];
+  readonly priorityClass  = priorityClass;
+  readonly statusClass    = statusClass;
+  readonly formatDateTime = formatDateTime;
+  readonly slaInfo        = slaInfo;
+  readonly initials       = initials;
+
+  ngOnInit(): void {
+    const id = Number(this.route.snapshot.paramMap.get('id'));
     this.api.getTicketById(id).subscribe({
-      next:  (t) => { this.ticket = t; this.loading = false; },
-      error: ()  => { this.toast.error('Ticket not found'); this.router.navigate(['/tickets']); }
+      next: t => { this.ticket.set(t); this.loading.set(false); },
+      error: () => { this.toast.error('Ticket not found'); this.loading.set(false); }
     });
-  }
-
-  deleteTicket() {
-    if (!confirm(`Delete ticket ${this.ticket?.ticketNumber}? This cannot be undone.`)) return;
-    this.api.deleteTicket(this.ticket!.id!).subscribe({
-      next:  () => { this.toast.success('Ticket deleted'); this.router.navigate(['/tickets']); },
-      error: ()  => this.toast.error('Failed to delete ticket')
-    });
-  }
-
-  priorityClass(p?: string): string {
-    if (!p) return '';
-    if (p.startsWith('P1')) return 'badge-p1';
-    if (p.startsWith('P2')) return 'badge-p2';
-    if (p.startsWith('P3')) return 'badge-p3';
-    return 'badge-p4';
-  }
-
-  statusClass(s?: string): string {
-    const map: Record<string, string> = {
-      'Open': 'status-open', 'In Progress': 'status-progress',
-      'On Hold': 'status-hold', 'Resolved': 'status-resolved', 'Closed': 'status-closed'
-    };
-    return map[s ?? ''] ?? '';
   }
 }

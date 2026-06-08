@@ -1,63 +1,51 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
-export class LoginComponent implements OnInit {
-  loginForm!: FormGroup;
-  loading = false;
-  returnUrl = '/dashboard';
+export class LoginComponent {
+  private fb     = inject(FormBuilder);
+  private auth   = inject(AuthService);
+  private router = inject(Router);
+  private toast  = inject(ToastService);
 
-  constructor(
-    private fb: FormBuilder,
-    private authService: AuthService,
-    private toast: ToastService,
-    private router: Router,
-    private route: ActivatedRoute
-  ) {}
+  showPw   = signal(false);
+  loading  = signal(false);
+  errorMsg = signal('');
 
-  ngOnInit() {
-    this.loginForm = this.fb.group({
-      usernameOrEmail: ['', [Validators.required]],
-      password: ['', [Validators.required, Validators.minLength(4)]]
-    });
-    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
-  }
+  form = this.fb.group({
+    usernameOrEmail: ['', [Validators.required]],
+    password:        ['', [Validators.required, Validators.minLength(6)]]
+  });
 
-  onSubmit() {
-    if (this.loginForm.invalid) {
-      this.loginForm.markAllAsTouched();
-      return;
-    }
+  get f() { return this.form.controls; }
 
-    this.loading = true;
-    this.authService.login(this.loginForm.value).subscribe({
-      next: (res) => {
-        this.loading = false;
+  submit(): void {
+    if (this.form.invalid) { this.form.markAllAsTouched(); return; }
+    this.loading.set(true);
+    this.errorMsg.set('');
+
+    this.auth.login(this.form.value as any).subscribe({
+      next: res => {
+        this.loading.set(false);
         if (res.success) {
-          this.toast.success('Welcome back to TicketOps!');
-          this.router.navigateByUrl(this.returnUrl);
+          this.toast.success(`Welcome back, ${res.data.user.username}!`);
+          this.router.navigate(['/dashboard']);
         }
       },
-      error: (err) => {
-        this.loading = false;
-        const msg = err?.error?.message || 'Authentication sequence failed. Check parameters.';
-        this.toast.error(msg);
+      error: err => {
+        this.loading.set(false);
+        this.errorMsg.set(err?.error?.message ?? 'Invalid credentials. Please try again.');
       }
     });
-  }
-
-  hasError(field: string): boolean {
-    const control = this.loginForm.get(field);
-    return !!(control?.invalid && control?.touched);
   }
 }

@@ -16,39 +16,21 @@
             "outputPath": "dist/ticket-management-frontend",
             "index": "src/index.html",
             "browser": "src/main.ts",
-            "polyfills": [
-              "zone.js"
-            ],
+            "polyfills": ["zone.js"],
             "tsConfig": "tsconfig.app.json",
-            "assets": [
-              "src/favicon.ico",
-              "src/assets"
-            ],
-            "styles": [
-              "src/styles.css"
-            ],
+            "assets": ["src/favicon.ico", "src/assets"],
+            "styles": ["src/styles.css"],
             "scripts": []
           },
           "configurations": {
             "production": {
               "budgets": [
-                {
-                  "type": "initial",
-                  "maximumWarning": "500kb",
-                  "maximumError": "1mb"
-                },
-                {
-                  "type": "anyComponentStyle",
-                  "maximumWarning": "500kb",
-                  "maximumError": "1mb"
-                }
+                { "type": "initial",          "maximumWarning": "2mb",   "maximumError": "5mb" },
+                { "type": "anyComponentStyle","maximumWarning": "200kb", "maximumError": "500kb" }
               ],
               "outputHashing": "all",
               "fileReplacements": [
-                {
-                  "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.prod.ts"
-                }
+                { "replace": "src/environments/environment.ts", "with": "src/environments/environment.prod.ts" }
               ]
             },
             "development": {
@@ -62,12 +44,8 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
-            "production": {
-              "buildTarget": "ticket-management-frontend:build:production"
-            },
-            "development": {
-              "buildTarget": "ticket-management-frontend:build:development"
-            }
+            "production":  { "buildTarget": "ticket-management-frontend:build:production" },
+            "development": { "buildTarget": "ticket-management-frontend:build:development" }
           },
           "defaultConfiguration": "development"
         }

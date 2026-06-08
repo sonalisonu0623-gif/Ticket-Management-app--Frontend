@@ -1,120 +1,186 @@
 <div class="page-wrapper">
 
-  <div *ngIf="loading" class="spinner-wrap"><div class="spinner"></div></div>
-
-  <ng-container *ngIf="!loading && ticket">
-
-    <div class="page-header">
-      <div class="detail-title-row">
-        <span class="ticket-id-hero">{{ ticket.ticketNumber }}</span>
-        <span class="status-badge" [ngClass]="statusClass(ticket.currentStatus)">{{ ticket.currentStatus }}</span>
-        <span class="badge" [ngClass]="priorityClass(ticket.priority)" *ngIf="ticket.priority">{{ ticket.priority }}</span>
-      </div>
-      <div class="header-actions">
-        <a [routerLink]="['/tickets/edit', ticket.id]" class="btn btn-primary">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          Edit Ticket
-        </a>
-        <button class="btn btn-danger" (click)="deleteTicket()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-          Delete
-        </button>
-        <a routerLink="/tickets" class="btn btn-secondary">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-          Back
-        </a>
-      </div>
+  <!-- Header -->
+  <div class="page-header">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;flex:1">
+      <a routerLink="/tickets" class="back-btn">
+        <span class="material-symbols-rounded">arrow_back</span>
+      </a>
+      @if (!loading() && ticket()) {
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex:1">
+          <div>
+            <h1 class="ticket-num-heading">{{ ticket()!.ticketNumber }}</h1>
+            <p class="page-subtitle">{{ ticket()!.projectName }}</p>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span class="badge {{ priorityClass(ticket()!.priority) }}">{{ ticket()!.priority }}</span>
+            <span class="badge {{ statusClass(ticket()!.currentStatus) }}">{{ ticket()!.currentStatus }}</span>
+            @if (ticket()!.slaBreached) {
+              <span class="badge" style="background:rgba(239,68,68,.12);color:#ef4444;border-color:rgba(239,68,68,.2)">
+                <span class="material-symbols-rounded" style="font-size:13px">timer_off</span>
+                SLA Breached
+              </span>
+            }
+          </div>
+        </div>
+        @if (auth.isAdmin() || auth.isProjectManager() || auth.isSupport()) {
+          <a [routerLink]="['/tickets/edit', ticket()!.id]"
+            <span class="material-symbols-rounded">edit</span>Edit Ticket
+          </a>
+        }
+      }
     </div>
+  </div>
+
+  <!-- Loading -->
+  @if (loading()) {
+    <div class="detail-grid">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="skeleton" style="height:180px;border-radius:10px"></div>
+        <div class="skeleton" style="height:120px;border-radius:10px"></div>
+      </div>
+      <div class="skeleton" style="height:360px;border-radius:10px"></div>
+    </div>
+  }
+
+  @if (!loading() && !ticket()) {
+    <div class="empty-state" style="min-height:300px">
+      <span class="material-symbols-rounded empty-icon">search_off</span>
+      <p class="empty-title">Ticket not found</p>
+      <a routerLink="/tickets" class="btn btn-primary" style="margin-top:12px">Back to Tickets</a>
+    </div>
+  }
+
+  @if (!loading() && ticket()) {
 
     <div class="detail-grid">
 
-      <!-- Issue -->
-      <div class="detail-card span-full">
-        <div class="card-label">Issue Description</div>
-        <p class="issue-body">{{ ticket.issueDescription }}</p>
-      </div>
+      <!-- Main -->
+      <div class="detail-main">
 
-      <!-- Ticket Info -->
-      <div class="detail-card">
-        <div class="card-label">Ticket Information</div>
-        <div class="info-rows">
-          <div class="info-row">
-            <span class="info-key">Project</span>
-            <span class="info-val">{{ ticket.projectName || '—' }}</span>
+        <!-- Issue -->
+        <div class="detail-card">
+          <p class="detail-label"><span class="material-symbols-rounded">description</span>Issue Description</p>
+          <p class="issue-body">{{ ticket()!.issueDescription }}</p>
+        </div>
+
+        <!-- Resolution -->
+        @if (ticket()!.resolutionDetails) {
+          <div class="detail-card" style="border-color:rgba(16,185,129,.2);background:rgba(16,185,129,.02)">
+            <p class="detail-label" style="color:#10b981">
+              <span class="material-symbols-rounded" style="color:#10b981">task_alt</span>Resolution
+            </p>
+            <p class="body-text">{{ ticket()!.resolutionDetails }}</p>
           </div>
-          <div class="info-row">
-            <span class="info-key">Assigned To</span>
-            <span class="info-val">
-              <span *ngIf="ticket.assignedEmployeeName" class="assignee">
-                <span class="avatar">{{ ticket.assignedEmployeeName.charAt(0) }}</span>
-                {{ ticket.assignedEmployeeName }}
+        }
+
+        <!-- Remarks -->
+        @if (ticket()!.remarks) {
+          <div class="detail-card">
+            <p class="detail-label"><span class="material-symbols-rounded">comment</span>Remarks</p>
+            <p class="body-text">{{ ticket()!.remarks }}</p>
+          </div>
+        }
+
+        <!-- SLA Card -->
+        <div class="detail-card" [class.sla-breached-card]="slaInfo(ticket()!).breached">
+          <p class="detail-label" [style.color]="slaInfo(ticket()!).breached ? '#ef4444' : undefined">
+            <span class="material-symbols-rounded" [style.color]="slaInfo(ticket()!).breached ? '#ef4444' : undefined">timer</span>
+            SLA Status
+          </p>
+          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+            <span class="sla-big" [style.color]="slaInfo(ticket()!).breached ? '#ef4444' : '#10b981'">
+              {{ slaInfo(ticket()!).label }}
+            </span>
+            @if (slaInfo(ticket()!).breached) {
+              <span class="badge" style="background:rgba(239,68,68,.12);color:#ef4444">
+                <span class="material-symbols-rounded" style="font-size:13px">warning</span>
+                SLA BREACHED
               </span>
-              <span *ngIf="!ticket.assignedEmployeeName" class="text-muted">Unassigned</span>
-            </span>
+            }
           </div>
-          <div class="info-row">
-            <span class="info-key">Support Level</span>
-            <span class="info-val">
-              <span class="level-tag" *ngIf="ticket.supportLevel">{{ ticket.supportLevel }}</span>
-              <span class="text-muted" *ngIf="!ticket.supportLevel">—</span>
-            </span>
+          <div style="margin-top:12px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="sla-bar-track">
+                <div class="sla-bar-fill"
+                  [class.breached]="slaInfo(ticket()!).breached"
+                  [style.width]="slaInfo(ticket()!).percentage + '%'">
+                </div>
+              </div>
+              <span style="font-size:11.5px;color:#445675;white-space:nowrap">{{ slaInfo(ticket()!).percentage }}% elapsed</span>
+            </div>
           </div>
-          <div class="info-row">
-            <span class="info-key">Priority</span>
-            <span class="info-val">
-              <span class="badge" [ngClass]="priorityClass(ticket.priority)" *ngIf="ticket.priority">{{ ticket.priority }}</span>
-              <span class="text-muted" *ngIf="!ticket.priority">—</span>
-            </span>
-          </div>
-          <div class="info-row">
-            <span class="info-key">Status</span>
-            <span class="info-val">
-              <span class="status-badge" [ngClass]="statusClass(ticket.currentStatus)">{{ ticket.currentStatus }}</span>
-            </span>
+          @if (ticket()!.businessHoursElapsed != null) {
+            <p style="margin-top:8px;font-size:12px;color:#445675">
+              {{ ticket()!.businessHoursElapsed }} business hours elapsed · Resolution time: {{ ticket()!.resolutionTime ?? 'Ongoing' }}
+            </p>
+          }
+        </div>
+
+      </div>
+
+      <!-- Side -->
+      <div class="detail-side">
+        <div class="detail-card">
+          <p class="detail-label"><span class="material-symbols-rounded">info</span>Ticket Details</p>
+          <div class="info-rows">
+            <div class="info-row">
+              <span class="info-key">Ticket #</span>
+              <span class="info-val mono">{{ ticket()!.ticketNumber }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Project</span>
+              <span class="info-val">{{ ticket()!.projectName }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Priority</span>
+              <span class="info-val"><span class="badge {{ priorityClass(ticket()!.priority) }}">{{ ticket()!.priority }}</span></span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Status</span>
+              <span class="info-val"><span class="badge {{ statusClass(ticket()!.currentStatus) }}">{{ ticket()!.currentStatus }}</span></span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Support Level</span>
+              <span class="info-val">
+                @if (ticket()!.supportLevel) { <span class="level-tag">{{ ticket()!.supportLevel }}</span> }
+                @else { <span style="color:#445675">—</span> }
+              </span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Assigned To</span>
+              <span class="info-val">
+                @if (ticket()!.assignedEmployeeName) {
+                  <div class="assignee">
+                    <div class="avatar">{{ initials(ticket()!.assignedEmployeeName) }}</div>
+                    {{ ticket()!.assignedEmployeeName }}
+                  </div>
+                } @else { <span style="color:#445675">Unassigned</span> }
+              </span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Generated</span>
+              <span class="info-val" style="font-size:12px">{{ formatDateTime(ticket()!.generationDatetime) }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Responded</span>
+              <span class="info-val" style="font-size:12px">{{ formatDateTime(ticket()!.responseDatetime) }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Resolution</span>
+              <span class="info-val" style="font-size:12px">{{ ticket()!.resolutionTime ?? '—' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Created</span>
+              <span class="info-val" style="font-size:12px">{{ formatDateTime(ticket()!.createdAt) }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Updated</span>
+              <span class="info-val" style="font-size:12px">{{ formatDateTime(ticket()!.updatedAt) }}</span>
+            </div>
           </div>
         </div>
       </div>
-
-      <!-- Timeline -->
-      <div class="detail-card">
-        <div class="card-label">Timeline</div>
-        <div class="info-rows">
-          <div class="info-row">
-            <span class="info-key">Generated</span>
-            <span class="info-val mono">{{ (ticket.generationDatetime | date:'dd MMM yyyy, HH:mm') || '—' }}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-key">Response Time</span>
-            <span class="info-val mono">{{ (ticket.responseDatetime | date:'dd MMM yyyy, HH:mm') || 'Pending' }}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-key">Resolution Time</span>
-            <span class="info-val" [class.resolution-time]="ticket.resolutionTime">{{ ticket.resolutionTime || 'In progress' }}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-key">Created At</span>
-            <span class="info-val mono">{{ (ticket.createdAt | date:'dd MMM yyyy, HH:mm') || '—' }}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-key">Last Updated</span>
-            <span class="info-val mono">{{ (ticket.updatedAt | date:'dd MMM yyyy, HH:mm') || '—' }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Resolution -->
-      <div class="detail-card span-full" *ngIf="ticket.resolutionDetails">
-        <div class="card-label">Resolution Details</div>
-        <p class="body-text success-text">{{ ticket.resolutionDetails }}</p>
-      </div>
-
-      <!-- Remarks -->
-      <div class="detail-card span-full" *ngIf="ticket.remarks">
-        <div class="card-label">Remarks</div>
-        <p class="body-text">{{ ticket.remarks }}</p>
-      </div>
-
     </div>
-  </ng-container>
-
+  }
 </div>

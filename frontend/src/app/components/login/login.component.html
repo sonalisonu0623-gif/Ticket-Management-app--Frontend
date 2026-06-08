@@ -1,45 +1,63 @@
-<div class="login-container">
-  <div class="login-card">
-    <div class="login-header">
-      <h2>TicketOps Secure Login</h2>
-      <p class="text-muted">Enter credentials to manage your system tracking parameters</p>
+<div class="login-card">
+  <div class="login-head">
+    <div class="login-logo">
+      <span class="material-symbols-rounded">support_agent</span>
+    </div>
+    <h1 class="login-title">TicketOps</h1>
+    <p class="login-sub">Enterprise Support Platform</p>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    @if (errorMsg()) {
+      <div class="error-alert">
+        <span class="material-symbols-rounded">error</span>
+        <span>{{ errorMsg() }}</span>
+      </div>
+    }
+
+    <div class="field-group">
+      <label class="lbl">Username or Email</label>
+      <div class="input-ico-wrap" [class.invalid]="f['usernameOrEmail'].invalid && f['usernameOrEmail'].touched">
+        <span class="material-symbols-rounded ico">person</span>
+        <input formControlName="usernameOrEmail" type="text" class="inp"
+          placeholder="admin" autocomplete="username" />
+      </div>
+      @if (f['usernameOrEmail'].invalid && f['usernameOrEmail'].touched) {
+        <p class="err-msg">Username or email is required</p>
+      }
     </div>
 
-    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
-      <div class="form-group">
-        <label for="usernameOrEmail">Username or Email</label>
-        <input
-          id="usernameOrEmail"
-          type="text"
-          formControlName="usernameOrEmail"
-          class="form-control"
-          placeholder="Enter username or account email"
-          [class.is-invalid]="hasError('usernameOrEmail')"
-        />
-        <div class="error-msg" *ngIf="hasError('usernameOrEmail')">
-          Identification entry is required
-        </div>
+    <div class="field-group">
+      <label class="lbl">Password</label>
+      <div class="input-ico-wrap" [class.invalid]="f['password'].invalid && f['password'].touched">
+        <span class="material-symbols-rounded ico">lock</span>
+        <input formControlName="password" [type]="showPw() ? 'text' : 'password'"
+          class="inp" placeholder="••••••••" autocomplete="current-password" />
+        <button type="button" class="toggle-pw" (click)="showPw.update(v=>!v)">
+          <span class="material-symbols-rounded">{{ showPw() ? 'visibility_off' : 'visibility' }}</span>
+        </button>
       </div>
+      @if (f['password'].invalid && f['password'].touched) {
+        <p class="err-msg">Password must be at least 6 characters</p>
+      }
+    </div>
 
-      <div class="form-group">
-        <label for="password">System Verification Password</label>
-        <input
-          id="password"
-          type="password"
-          formControlName="password"
-          class="form-control"
-          placeholder="••••••••"
-          [class.is-invalid]="hasError('password')"
-        />
-        <div class="error-msg" *ngIf="hasError('password')">
-          Valid access password is required (minimum 4 digits)
-        </div>
+    <button type="submit" class="btn-login" [disabled]="loading()">
+      @if (loading()) { <span class="spin"></span> Signing in… }
+      @else { <span class="material-symbols-rounded">login</span> Sign In }
+    </button>
+
+    <p class="footer-txt">
+      No account? <a routerLink="/register" class="link">Create one</a>
+    </p>
+
+    <div class="demo-note">
+      <p>Demo credentials</p>
+      <div class="demo-pills">
+        <span class="pill">admin / password</span>
+        <span class="pill">l1_john / password</span>
+        <span class="pill">user_test / password</span>
       </div>
-
-      <button type="submit" [disabled]="loading" class="btn btn-primary btn-block">
-        <span *ngIf="!loading">Authenticate Entry</span>
-        <span *ngIf="loading">Validating Secure Handshake...</span>
-      </button>
-    </form>
-  </div>
+    </div>
+  </form>
 </div>

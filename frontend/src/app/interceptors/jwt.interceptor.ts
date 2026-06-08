@@ -1,30 +1,33 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, throwError } from 'rxjs';
+import { catchError, throwError, finalize } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { ToastService } from '../services/toast.service';
+import { LoadingService } from '../services/loading.service';
 
 export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
-  const authService = inject(AuthService);
-  const toast = inject(ToastService);
-  const token = authService.token();
+  const auth    = inject(AuthService);
+  const toast   = inject(ToastService);
+  const loading = inject(LoadingService);
+  const token   = auth.token();
 
-  let clonedRequest = req;
-  if (token) {
-    clonedRequest = req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-  }
+  const authReq = token
+    ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
+    : req;
 
-  return next(clonedRequest).pipe(
-    catchError((error: HttpErrorResponse) => {
-      if (error.status === 401) {
-        toast.error('Session expired or unauthorized access attempt.');
-        authService.logout();
+  loading.increment();
+  return next(authReq).pipe(
+    finalize(() => loading.decrement()),
+    catchError((err: HttpErrorResponse) => {
+      if (err.status === 401) {
+        toast.error('Session expired', 'Please log in again.');
+        auth.logout();
+      } else if (err.status === 403) {
+        toast.error('Access denied', 'You do not have permission for this action.');
+      } else if (err.status === 0) {
+        toast.error('Network error', 'Cannot reach the server.');
       }
-      return throwError(() => error);
+      return throwError(() => err);
     })
   );
 };

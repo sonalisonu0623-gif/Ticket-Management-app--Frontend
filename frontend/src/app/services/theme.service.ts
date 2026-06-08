@@ -6,20 +6,16 @@ export class ThemeService {
   theme = this._theme.asReadonly();
 
   constructor() {
-    const saved = localStorage.getItem('ticketops-theme') as 'dark' | 'light' | null;
-    const initial = saved || 'dark';
-    this._theme.set(initial);
-    document.documentElement.setAttribute('data-theme', initial);
+    // Always dark for enterprise theme
+    this._theme.set('dark');
+    document.documentElement.setAttribute('data-theme', 'dark');
   }
 
-  toggle() {
+  toggle(): void {
     const next = this._theme() === 'dark' ? 'light' : 'dark';
     this._theme.set(next);
-    localStorage.setItem('ticketops-theme', next);
     document.documentElement.setAttribute('data-theme', next);
   }
 
-  isDark() {
-    return this._theme() === 'dark';
-  }
+  isDark(): boolean { return this._theme() === 'dark'; }
 }

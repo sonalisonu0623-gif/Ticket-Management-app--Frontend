@@ -1,3 +1,0 @@
-.emp-cell { display: flex; align-items: center; gap: 10px; }
-.emp-avatar { width: 30px; height: 30px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
-.emp-name { font-weight: 500; }
