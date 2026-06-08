@@ -33,8 +33,7 @@
             </span>
 
             @if (ticket()?.slaBreached) {
-              <span class="badge"
-                style="background:rgba(239,68,68,.12);color:#ef4444">
+              <span class="badge" style="background:rgba(239,68,68,.12);color:#ef4444">
                 <span class="material-symbols-rounded">timer_off</span>
                 SLA Breached
               </span>
@@ -107,11 +106,11 @@
 
           <div style="display:flex;align-items:center;gap:12px">
 
-            <span [style.color]="slaInfo(ticket()!).breached ? '#ef4444' : '#10b981'">
-              {{ slaInfo(ticket()!).label }}
+            <span [style.color]="sla()?.breached ? '#ef4444' : '#10b981'">
+              {{ sla()?.label }}
             </span>
 
-            @if (slaInfo(ticket()!).breached) {
+            @if (sla()?.breached) {
               <span class="badge" style="color:#ef4444">BREACHED</span>
             }
 

@@ -39,192 +39,188 @@
     </div>
   }
 
-  <!-- DATA -->
+  <!-- DATA (FIXED) -->
   @if (!loading() && data()) {
 
-    @if (data() as d) {
+    @let d = data();
 
-      <!-- KPI -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px">
+    <!-- KPI -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px">
 
-        <div class="report-kpi">
-          <div class="rk-icon"><span class="material-symbols-rounded">confirmation_number</span></div>
-          <div class="rk-val">{{ d.totalTickets }}</div>
-          <div class="rk-lbl">Total Tickets</div>
-        </div>
-
-        <div class="report-kpi">
-          <div class="rk-icon"><span class="material-symbols-rounded">check_circle</span></div>
-          <div class="rk-val">{{ d.resolvedTickets }}</div>
-          <div class="rk-lbl">Resolved</div>
-        </div>
-
-        <div class="report-kpi">
-          <div class="rk-icon"><span class="material-symbols-rounded">timer_off</span></div>
-          <div class="rk-val">{{ d.slaBreachedTickets }}</div>
-          <div class="rk-lbl">SLA Breached</div>
-        </div>
-
-        <div class="report-kpi">
-          <div class="rk-icon"><span class="material-symbols-rounded">verified</span></div>
-          <div class="rk-val">{{ d.slaComplianceRate | number:'1.0-1' }}%</div>
-          <div class="rk-lbl">SLA Compliance</div>
-        </div>
-
-        <div class="report-kpi">
-          <div class="rk-icon"><span class="material-symbols-rounded">timer</span></div>
-          <div class="rk-val">
-            {{ d.avgResolutionHours != null ? (d.avgResolutionHours | number:'1.1-1') + 'h' : '—' }}
-          </div>
-          <div class="rk-lbl">Avg Resolution</div>
-        </div>
-
+      <div class="report-kpi">
+        <div class="rk-icon"><span class="material-symbols-rounded">confirmation_number</span></div>
+        <div class="rk-val">{{ d?.totalTickets }}</div>
+        <div class="rk-lbl">Total Tickets</div>
       </div>
 
-      <!-- STATUS + PRIORITY -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-
-        <!-- STATUS -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">
-              <span class="material-symbols-rounded">donut_large</span>
-              Tickets by Status
-            </h3>
-          </div>
-
-          <div class="card-body">
-
-            @for (entry of statusEntries(); track entry[0]) {
-              <div class="report-bar-row">
-                <span class="rb-label">{{ entry[0] }}</span>
-
-                <div class="rb-track">
-                  <div class="rb-fill"
-                       [style.width]="barWidth(entry[1], maxStatus()) + '%'"
-                       [style.background]="statusColor(entry[0])">
-                  </div>
-                </div>
-
-                <span class="rb-count" [style.color]="statusColor(entry[0])">
-                  {{ entry[1] }}
-                </span>
-              </div>
-            }
-
-          </div>
-        </div>
-
-        <!-- PRIORITY -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">
-              <span class="material-symbols-rounded">signal_cellular_alt</span>
-              Tickets by Priority
-            </h3>
-          </div>
-
-          <div class="card-body">
-
-            @for (entry of priorityEntries(); track entry[0]) {
-              <div class="report-bar-row">
-                <span class="rb-label">{{ entry[0] }}</span>
-
-                <div class="rb-track">
-                  <div class="rb-fill"
-                       [style.width]="barWidth(entry[1], maxPriority()) + '%'"
-                       [style.background]="priorityColor(entry[0])">
-                  </div>
-                </div>
-
-                <span class="rb-count" [style.color]="priorityColor(entry[0])">
-                  {{ entry[1] }}
-                </span>
-              </div>
-            }
-
-          </div>
-        </div>
-
+      <div class="report-kpi">
+        <div class="rk-icon"><span class="material-symbols-rounded">check_circle</span></div>
+        <div class="rk-val">{{ d?.resolvedTickets }}</div>
+        <div class="rk-lbl">Resolved</div>
       </div>
 
-      <!-- EMPLOYEE TABLE -->
-      @if (d.employeePerformance?.length > 0) {
-        <div class="card">
+      <div class="report-kpi">
+        <div class="rk-icon"><span class="material-symbols-rounded">timer_off</span></div>
+        <div class="rk-val">{{ d?.slaBreachedTickets }}</div>
+        <div class="rk-lbl">SLA Breached</div>
+      </div>
 
-          <div class="card-header">
-            <h3 class="card-title">
-              <span class="material-symbols-rounded">leaderboard</span>
-              Employee Performance Report
-            </h3>
-          </div>
+      <div class="report-kpi">
+        <div class="rk-icon"><span class="material-symbols-rounded">verified</span></div>
+        <div class="rk-val">{{ d?.slaComplianceRate | number:'1.0-1' }}%</div>
+        <div class="rk-lbl">SLA Compliance</div>
+      </div>
 
-          <div class="table-wrapper">
-            <table class="data-table">
-              <thead>
+      <div class="report-kpi">
+        <div class="rk-icon"><span class="material-symbols-rounded">timer</span></div>
+        <div class="rk-val">
+          {{ d?.avgResolutionHours != null ? (d?.avgResolutionHours | number:'1.1-1') + 'h' : '—' }}
+        </div>
+        <div class="rk-lbl">Avg Resolution</div>
+      </div>
+
+    </div>
+
+    <!-- STATUS + PRIORITY -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+      <!-- STATUS -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <span class="material-symbols-rounded">donut_large</span>
+            Tickets by Status
+          </h3>
+        </div>
+
+        <div class="card-body">
+          @for (entry of statusEntries(); track entry[0]) {
+            <div class="report-bar-row">
+              <span class="rb-label">{{ entry[0] }}</span>
+
+              <div class="rb-track">
+                <div class="rb-fill"
+                     [style.width]="barWidth(entry[1], maxStatus()) + '%'"
+                     [style.background]="statusColor(entry[0])">
+                </div>
+              </div>
+
+              <span class="rb-count" [style.color]="statusColor(entry[0])">
+                {{ entry[1] }}
+              </span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- PRIORITY -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <span class="material-symbols-rounded">signal_cellular_alt</span>
+            Tickets by Priority
+          </h3>
+        </div>
+
+        <div class="card-body">
+          @for (entry of priorityEntries(); track entry[0]) {
+            <div class="report-bar-row">
+              <span class="rb-label">{{ entry[0] }}</span>
+
+              <div class="rb-track">
+                <div class="rb-fill"
+                     [style.width]="barWidth(entry[1], maxPriority()) + '%'"
+                     [style.background]="priorityColor(entry[0])">
+                </div>
+              </div>
+
+              <span class="rb-count" [style.color]="priorityColor(entry[0])">
+                {{ entry[1] }}
+              </span>
+            </div>
+          }
+        </div>
+      </div>
+
+    </div>
+
+    <!-- EMPLOYEE TABLE -->
+    @if (d?.employeePerformance?.length > 0) {
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <span class="material-symbols-rounded">leaderboard</span>
+            Employee Performance Report
+          </h3>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Level</th>
+                <th>Total</th>
+                <th>Resolved</th>
+                <th>Open</th>
+                <th>SLA Breached</th>
+                <th>Avg Resolution</th>
+                <th>Resolution Rate</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (ep of d.employeePerformance; track ep.employeeId) {
+
                 <tr>
-                  <th>Employee</th>
-                  <th>Level</th>
-                  <th>Total</th>
-                  <th>Resolved</th>
-                  <th>Open</th>
-                  <th>SLA Breached</th>
-                  <th>Avg Resolution</th>
-                  <th>Resolution Rate</th>
-                </tr>
-              </thead>
 
-              <tbody>
-                @for (ep of d.employeePerformance; track ep.employeeId) {
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div class="avatar">{{ ep.employeeName?.charAt(0) }}</div>
+                      <span>{{ ep.employeeName }}</span>
+                    </div>
+                  </td>
 
-                  <tr>
+                  <td><span class="level-tag">{{ ep.supportLevel }}</span></td>
+                  <td>{{ ep.totalAssigned }}</td>
+                  <td>{{ ep.resolved }}</td>
+                  <td>{{ ep.open }}</td>
 
-                    <td>
-                      <div style="display:flex;align-items:center;gap:8px">
-                        <div class="avatar">{{ ep.employeeName?.charAt(0) }}</div>
-                        <span>{{ ep.employeeName }}</span>
-                      </div>
-                    </td>
+                  <td [style.color]="ep.slaBreached > 0 ? '#ef4444' : '#10b981'">
+                    {{ ep.slaBreached }}
+                  </td>
 
-                    <td><span class="level-tag">{{ ep.supportLevel }}</span></td>
-                    <td>{{ ep.totalAssigned }}</td>
-                    <td>{{ ep.resolved }}</td>
-                    <td>{{ ep.open }}</td>
+                  <td>
+                    {{ ep.avgResolutionHours ? (ep.avgResolutionHours | number:'1.1-1') + 'h' : '—' }}
+                  </td>
 
-                    <td [style.color]="ep.slaBreached > 0 ? '#ef4444' : '#10b981'">
-                      {{ ep.slaBreached }}
-                    </td>
+                  <td>
+                    <div style="display:flex;gap:8px;align-items:center">
 
-                    <td>
-                      {{ ep.avgResolutionHours ? (ep.avgResolutionHours | number:'1.1-1') + 'h' : '—' }}
-                    </td>
-
-                    <td>
-                      <div style="display:flex;gap:8px;align-items:center">
-
-                        <div style="flex:1;height:6px;background:#1a2540;border-radius:3px;overflow:hidden">
-                          <div [style.width]="(ep.totalAssigned > 0 ? (ep.resolved / ep.totalAssigned * 100) : 0) + '%'"
-                               style="height:100%;background:#10b981">
-                          </div>
+                      <div style="flex:1;height:6px;background:#1a2540;border-radius:3px;overflow:hidden">
+                        <div
+                          [style.width]="(ep.totalAssigned > 0 ? (ep.resolved / ep.totalAssigned * 100) : 0) + '%'"
+                          style="height:100%;background:#10b981">
                         </div>
-
-                        <span>
-                          {{ (ep.totalAssigned > 0 ? (ep.resolved / ep.totalAssigned * 100) : 0) | number:'1.0-0' }}%
-                        </span>
-
                       </div>
-                    </td>
 
-                  </tr>
+                      <span>
+                        {{ (ep.totalAssigned > 0 ? (ep.resolved / ep.totalAssigned * 100) : 0) | number:'1.0-0' }}%
+                      </span>
 
-                }
-              </tbody>
+                    </div>
+                  </td>
 
-            </table>
-          </div>
+                </tr>
 
+              }
+            </tbody>
+
+          </table>
         </div>
-      }
+      </div>
 
     }
 

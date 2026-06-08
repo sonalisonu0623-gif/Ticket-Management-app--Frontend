@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
@@ -33,11 +33,22 @@ export class TicketDetailComponent implements OnInit {
   readonly priorityClass = priorityClass;
   readonly statusClass = statusClass;
   readonly formatDateTime = formatDateTime;
-  readonly slaInfo = slaInfo;
   readonly initials = initials;
+
+  // ✅ SAFE computed SLA (prevents repeated calls + null crash)
+  sla = computed(() => {
+    const t = this.ticket();
+    return t ? slaInfo(t) : null;
+  });
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
+
+    if (!id || isNaN(id)) {
+      this.toast.error('Invalid ticket id');
+      this.loading.set(false);
+      return;
+    }
 
     this.api.getTicketById(id).subscribe({
       next: (t) => {
@@ -51,7 +62,7 @@ export class TicketDetailComponent implements OnInit {
     });
   }
 
-  // ✅ SAFE helper (prevents undefined crash)
+  // ✅ SAFE initials helper
   safeInitials(name?: string | null): string {
     if (!name) return 'U';
     return name.charAt(0).toUpperCase();
