@@ -1,8 +1,12 @@
 {
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/ticket-management-frontend/browser",
+  "installCommand": "npm install",
+  "framework": null,
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/"
+      "destination": "/index.html"
     }
   ]
 }
