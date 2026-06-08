@@ -18,7 +18,8 @@ export class ReportsComponent implements OnInit {
   readonly store = inject(ProjectStore);
   private fb = inject(FormBuilder);
 
-  loading = signal(true);
+  // ✅ SAFE SIGNALS
+  loading = signal<boolean>(true);
   data = signal<DashboardDTO | null>(null);
   projects = signal<Project[]>([]);
 
@@ -27,18 +28,31 @@ export class ReportsComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.api.getProjects('ACTIVE').subscribe(p => this.projects.set(p));
+    this.loadProjects();
     this.load();
   }
 
+  // ----------------------------
+  // LOAD PROJECTS
+  // ----------------------------
+  private loadProjects(): void {
+    this.api.getProjects('ACTIVE').subscribe({
+      next: (p: Project[]) => this.projects.set(p),
+      error: () => this.projects.set([])
+    });
+  }
+
+  // ----------------------------
+  // LOAD DASHBOARD DATA
+  // ----------------------------
   load(): void {
     this.loading.set(true);
 
     const pid = this.filterForm.value.projectId ?? undefined;
 
     this.api.getDashboard(pid).subscribe({
-      next: d => {
-        this.data.set(d);
+      next: (d: DashboardDTO) => {
+        this.data.set(d ?? null);
         this.loading.set(false);
       },
       error: () => {
@@ -52,13 +66,19 @@ export class ReportsComponent implements OnInit {
     this.load();
   }
 
-  statusEntries = computed(() => {
+  // ----------------------------
+  // SAFE COMPUTED VALUES
+  // ----------------------------
+
+  statusEntries = computed((): [string, number][] => {
     const d = this.data();
     if (!d?.ticketsByStatus) return [];
-    return Object.entries(d.ticketsByStatus).map(([k, v]) => [k, Number(v)] as [string, number]);
+
+    return Object.entries(d.ticketsByStatus)
+      .map(([k, v]) => [k, Number(v)] as [string, number]);
   });
 
-  priorityEntries = computed(() => {
+  priorityEntries = computed((): [string, number][] => {
     const d = this.data();
     if (!d?.ticketsByPriority) return [];
 
@@ -69,7 +89,11 @@ export class ReportsComponent implements OnInit {
       .sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
   });
 
-  statusColor(s: string): string {
+  // ----------------------------
+  // UI HELPERS
+  // ----------------------------
+
+  statusColor(status: string): string {
     return {
       Open: '#3b82f6',
       'In Progress': '#f59e0b',
@@ -77,27 +101,33 @@ export class ReportsComponent implements OnInit {
       Resolved: '#10b981',
       Closed: '#64748b',
       Escalated: '#ef4444'
-    }[s] ?? '#64748b';
+    }[status] ?? '#64748b';
   }
 
-  priorityColor(p: string): string {
+  priorityColor(priority: string): string {
     return {
       'P1 - Critical': '#ef4444',
       'P2 - High': '#f59e0b',
       'P3 - Medium': '#3b82f6',
       'P4 - Low': '#10b981'
-    }[p] ?? '#64748b';
+    }[priority] ?? '#64748b';
   }
 
-  barWidth(val: number, max: number): number {
-    return max > 0 ? Math.round((val / max) * 100) : 0;
+  barWidth(value: number, max: number): number {
+    return max > 0 ? Math.round((value / max) * 100) : 0;
   }
 
   maxStatus(): number {
-    return Math.max(...this.statusEntries().map(([, v]) => v), 1);
+    return Math.max(
+      ...this.statusEntries().map(([, v]) => v),
+      1
+    );
   }
 
   maxPriority(): number {
-    return Math.max(...this.priorityEntries().map(([, v]) => v), 1);
+    return Math.max(
+      ...this.priorityEntries().map(([, v]) => v),
+      1
+    );
   }
 }
