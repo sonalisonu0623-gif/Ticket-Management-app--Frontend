@@ -55,7 +55,28 @@
 
   --transition: 200ms cubic-bezier(.4,0,.2,1);
 }
+/* DARK DEFAULT */
+:root,
+[data-theme="dark"] {
+  --bg-primary: #0b0f1a;
+  --bg-secondary: #0f1422;
+  --bg-card: #141929;
+  --text-primary: #e2e8f0;
+  --text-secondary: #8fa3bf;
+  --text-muted: #445675;
+  --accent: #3b82f6;
+}
 
+/* LIGHT THEME OVERRIDE */
+[data-theme="light"] {
+  --bg-primary: #f1f5f9;
+  --bg-secondary: #e8edf4;
+  --bg-card: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --accent: #2563eb;
+}
 /* ── Reset ────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; }
