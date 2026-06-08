@@ -1,7 +1,10 @@
 <div class="page-wrapper">
   <div class="page-header">
     <div class="page-title-block">
-      <h1 class="page-title"><span class="material-symbols-rounded">account_circle</span>My Profile</h1>
+      <h1 class="page-title">
+        <span class="material-symbols-rounded">account_circle</span>
+        My Profile
+      </h1>
       <p class="page-subtitle">Account information and settings</p>
     </div>
   </div>
@@ -14,102 +17,161 @@
   }
 
   @if (!loading() && user()) {
-    <div class="profile-grid">
 
-      <!-- Avatar Card -->
-      <div class="card" style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:28px;text-align:center">
-        <div class="profile-avatar">{{ initials }}</div>
-        <div>
-          <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:#e2e8f0">{{ user()!.username }}</h2>
-          <p style="margin:0;font-size:13px;color:#8fa3bf">{{ user()!.email }}</p>
+    <div *ngIf="user() as u">
+
+      <div class="profile-grid">
+
+        <!-- Avatar Card -->
+        <div class="card" style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:28px;text-align:center">
+
+          <div class="profile-avatar">{{ initials }}</div>
+
+          <div>
+            <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:#e2e8f0">
+              {{ u.username }}
+            </h2>
+            <p style="margin:0;font-size:13px;color:#8fa3bf">
+              {{ u.email }}
+            </p>
+          </div>
+
+          <!-- FIXED CLASS BINDING -->
+          <span class="user-role-chip" [ngClass]="roleClass(u.role)" style="font-size:12px;padding:3px 12px">
+            {{ roleLabel(u.role) }}
+          </span>
+
+          <div class="profile-meta">
+            <div class="pm-row">
+              <span class="pm-key">Member since</span>
+              <span class="pm-val">{{ formatDateTime(u.createdAt) }}</span>
+            </div>
+
+            <div class="pm-row">
+              <span class="pm-key">Account status</span>
+              <span class="pm-val" [style.color]="u.isActive ? '#10b981' : '#ef4444'">
+                {{ u.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </div>
+
+            <div class="pm-row">
+              <span class="pm-key">User ID</span>
+              <span class="pm-val mono">#{{ u.id }}</span>
+            </div>
+          </div>
+
+          <button class="btn btn-danger"
+                  style="width:100%;justify-content:center;margin-top:8px"
+                  (click)="logout()">
+            <span class="material-symbols-rounded">logout</span>
+            Sign Out
+          </button>
+
         </div>
-        <span class="user-role-chip {{ roleClass(user()!.role) }}" style="font-size:12px;padding:3px 12px">
-          {{ roleLabel(user()!.role) }}
-        </span>
-        <div class="profile-meta">
-          <div class="pm-row">
-            <span class="pm-key">Member since</span>
-            <span class="pm-val">{{ formatDateTime(user()!.createdAt) }}</span>
+
+        <!-- Details Card -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+
+          <div class="form-section">
+            <div class="section-header">
+              <div class="section-icon">
+                <span class="material-symbols-rounded">badge</span>
+              </div>
+              <span class="section-title">Account Information</span>
+            </div>
+
+            <!-- FIX: ensure form exists in TS -->
+            <form [formGroup]="form">
+              <div class="form-grid cols-2">
+
+                <div class="form-field">
+                  <label class="field-label">Username</label>
+                  <input formControlName="username"
+                         type="text"
+                         class="field-input"
+                         readonly />
+                </div>
+
+                <div class="form-field">
+                  <label class="field-label">Email</label>
+                  <input formControlName="email"
+                         type="email"
+                         class="field-input"
+                         readonly />
+                </div>
+
+                <div class="form-field">
+                  <label class="field-label">Role</label>
+                  <input formControlName="role"
+                         type="text"
+                         class="field-input"
+                         readonly />
+                </div>
+
+              </div>
+            </form>
+
+            <p style="margin-top:12px;font-size:12px;color:#445675">
+              <span class="material-symbols-rounded" style="font-size:14px;vertical-align:middle">info</span>
+              To update your profile or email, contact your system administrator.
+            </p>
           </div>
-          <div class="pm-row">
-            <span class="pm-key">Account status</span>
-            <span class="pm-val" [style.color]="user()!.isActive ? '#10b981' : '#ef4444'">
-              {{ user()!.isActive ? 'Active' : 'Inactive' }}
-            </span>
+
+          <!-- Permissions -->
+          <div class="form-section">
+            <div class="section-header">
+              <div class="section-icon">
+                <span class="material-symbols-rounded">security</span>
+              </div>
+              <span class="section-title">Access Permissions</span>
+            </div>
+
+            <div class="permissions-grid">
+
+              <div class="perm-item" [class.allowed]="auth.isAdmin()">
+                <span class="material-symbols-rounded">
+                  {{ auth.isAdmin() ? 'check_circle' : 'cancel' }}
+                </span>
+                System Configuration
+              </div>
+
+              <div class="perm-item" [class.allowed]="auth.isAdmin() || auth.isProjectManager()">
+                <span class="material-symbols-rounded">
+                  {{ (auth.isAdmin() || auth.isProjectManager()) ? 'check_circle' : 'cancel' }}
+                </span>
+                Manage Employees
+              </div>
+
+              <div class="perm-item" [class.allowed]="auth.isAdmin() || auth.isProjectManager() || auth.isSupport()">
+                <span class="material-symbols-rounded">
+                  {{ (auth.isAdmin() || auth.isProjectManager() || auth.isSupport()) ? 'check_circle' : 'cancel' }}
+                </span>
+                Update Tickets
+              </div>
+
+              <div class="perm-item" [class.allowed]="auth.isAdmin()">
+                <span class="material-symbols-rounded">
+                  {{ auth.isAdmin() ? 'check_circle' : 'cancel' }}
+                </span>
+                Delete Tickets
+              </div>
+
+              <div class="perm-item allowed">
+                <span class="material-symbols-rounded">check_circle</span>
+                View Dashboard
+              </div>
+
+              <div class="perm-item allowed">
+                <span class="material-symbols-rounded">check_circle</span>
+                Create Tickets
+              </div>
+
+            </div>
           </div>
-          <div class="pm-row">
-            <span class="pm-key">User ID</span>
-            <span class="pm-val mono">#{{ user()!.id }}</span>
-          </div>
+
         </div>
-        <button class="btn btn-danger" style="width:100%;justify-content:center;margin-top:8px" (click)="logout()">
-          <span class="material-symbols-rounded">logout</span>Sign Out
-        </button>
       </div>
 
-      <!-- Details Card -->
-      <div style="display:flex;flex-direction:column;gap:16px">
-        <div class="form-section">
-          <div class="section-header">
-            <div class="section-icon"><span class="material-symbols-rounded">badge</span></div>
-            <span class="section-title">Account Information</span>
-          </div>
-          <form [formGroup]="form">
-            <div class="form-grid cols-2">
-              <div class="form-field">
-                <label class="field-label">Username</label>
-                <input formControlName="username" type="text" class="field-input" style="opacity:.6;cursor:not-allowed" />
-              </div>
-              <div class="form-field">
-                <label class="field-label">Email</label>
-                <input formControlName="email" type="email" class="field-input" style="opacity:.6;cursor:not-allowed" />
-              </div>
-              <div class="form-field">
-                <label class="field-label">Role</label>
-                <input formControlName="role" type="text" class="field-input" style="opacity:.6;cursor:not-allowed" />
-              </div>
-            </div>
-          </form>
-          <p style="margin-top:12px;font-size:12px;color:#445675">
-            <span class="material-symbols-rounded" style="font-size:14px;vertical-align:middle">info</span>
-            To update your profile or email, contact your system administrator.
-          </p>
-        </div>
-
-        <!-- Role Permissions Card -->
-        <div class="form-section">
-          <div class="section-header">
-            <div class="section-icon"><span class="material-symbols-rounded">security</span></div>
-            <span class="section-title">Access Permissions</span>
-          </div>
-          <div class="permissions-grid">
-            <div class="perm-item" [class.allowed]="auth.isAdmin()">
-              <span class="material-symbols-rounded">{{ auth.isAdmin() ? 'check_circle' : 'cancel' }}</span>
-              System Configuration
-            </div>
-            <div class="perm-item" [class.allowed]="auth.isAdmin() || auth.isProjectManager()">
-              <span class="material-symbols-rounded">{{ (auth.isAdmin() || auth.isProjectManager()) ? 'check_circle' : 'cancel' }}</span>
-              Manage Employees
-            </div>
-            <div class="perm-item" [class.allowed]="auth.isAdmin() || auth.isProjectManager() || auth.isSupport()">
-              <span class="material-symbols-rounded">{{ (auth.isAdmin() || auth.isProjectManager() || auth.isSupport()) ? 'check_circle' : 'cancel' }}</span>
-              Update Tickets
-            </div>
-            <div class="perm-item" [class.allowed]="auth.isAdmin()">
-              <span class="material-symbols-rounded">{{ auth.isAdmin() ? 'check_circle' : 'cancel' }}</span>
-              Delete Tickets
-            </div>
-            <div class="perm-item allowed">
-              <span class="material-symbols-rounded">check_circle</span>
-              View Dashboard
-            </div>
-            <div class="perm-item allowed">
-              <span class="material-symbols-rounded">check_circle</span>
-              Create Tickets
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   }
 </div>

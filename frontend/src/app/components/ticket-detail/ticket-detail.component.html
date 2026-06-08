@@ -3,18 +3,28 @@
   <!-- Header -->
   <div class="page-header">
     <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;flex:1">
+      
       <a routerLink="/tickets" class="back-btn">
         <span class="material-symbols-rounded">arrow_back</span>
       </a>
+
       @if (!loading() && ticket()) {
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex:1">
+          
           <div>
             <h1 class="ticket-num-heading">{{ ticket()!.ticketNumber }}</h1>
             <p class="page-subtitle">{{ ticket()!.projectName }}</p>
           </div>
+
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <span class="badge {{ priorityClass(ticket()!.priority) }}">{{ ticket()!.priority }}</span>
-            <span class="badge {{ statusClass(ticket()!.currentStatus) }}">{{ ticket()!.currentStatus }}</span>
+            <span class="badge {{ priorityClass(ticket()!.priority) }}">
+              {{ ticket()!.priority }}
+            </span>
+
+            <span class="badge {{ statusClass(ticket()!.currentStatus) }}">
+              {{ ticket()!.currentStatus }}
+            </span>
+
             @if (ticket()!.slaBreached) {
               <span class="badge" style="background:rgba(239,68,68,.12);color:#ef4444;border-color:rgba(239,68,68,.2)">
                 <span class="material-symbols-rounded" style="font-size:13px">timer_off</span>
@@ -23,9 +33,11 @@
             }
           </div>
         </div>
+
         @if (auth.isAdmin() || auth.isProjectManager() || auth.isSupport()) {
-          <a [routerLink]="['/tickets/edit', ticket()!.id]"
-            <span class="material-symbols-rounded">edit</span>Edit Ticket
+          <a class="edit-link" [routerLink]="['/tickets/edit', ticket()!.id]">
+            <span class="material-symbols-rounded">edit</span>
+            Edit Ticket
           </a>
         }
       }
@@ -43,6 +55,7 @@
     </div>
   }
 
+  <!-- Not Found -->
   @if (!loading() && !ticket()) {
     <div class="empty-state" style="min-height:300px">
       <span class="material-symbols-rounded empty-icon">search_off</span>
@@ -51,47 +64,55 @@
     </div>
   }
 
+  <!-- DETAILS -->
   @if (!loading() && ticket()) {
 
     <div class="detail-grid">
 
-      <!-- Main -->
+      <!-- MAIN -->
       <div class="detail-main">
 
-        <!-- Issue -->
         <div class="detail-card">
-          <p class="detail-label"><span class="material-symbols-rounded">description</span>Issue Description</p>
+          <p class="detail-label">
+            <span class="material-symbols-rounded">description</span>
+            Issue Description
+          </p>
           <p class="issue-body">{{ ticket()!.issueDescription }}</p>
         </div>
 
-        <!-- Resolution -->
         @if (ticket()!.resolutionDetails) {
           <div class="detail-card" style="border-color:rgba(16,185,129,.2);background:rgba(16,185,129,.02)">
             <p class="detail-label" style="color:#10b981">
-              <span class="material-symbols-rounded" style="color:#10b981">task_alt</span>Resolution
+              <span class="material-symbols-rounded">task_alt</span>
+              Resolution
             </p>
-            <p class="body-text">{{ ticket()!.resolutionDetails }}</p>
+            <p>{{ ticket()!.resolutionDetails }}</p>
           </div>
         }
 
-        <!-- Remarks -->
         @if (ticket()!.remarks) {
           <div class="detail-card">
-            <p class="detail-label"><span class="material-symbols-rounded">comment</span>Remarks</p>
-            <p class="body-text">{{ ticket()!.remarks }}</p>
+            <p class="detail-label">
+              <span class="material-symbols-rounded">comment</span>
+              Remarks
+            </p>
+            <p>{{ ticket()!.remarks }}</p>
           </div>
         }
 
-        <!-- SLA Card -->
+        <!-- SLA -->
         <div class="detail-card" [class.sla-breached-card]="slaInfo(ticket()!).breached">
+
           <p class="detail-label" [style.color]="slaInfo(ticket()!).breached ? '#ef4444' : undefined">
-            <span class="material-symbols-rounded" [style.color]="slaInfo(ticket()!).breached ? '#ef4444' : undefined">timer</span>
+            <span class="material-symbols-rounded">timer</span>
             SLA Status
           </p>
+
           <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
             <span class="sla-big" [style.color]="slaInfo(ticket()!).breached ? '#ef4444' : '#10b981'">
               {{ slaInfo(ticket()!).label }}
             </span>
+
             @if (slaInfo(ticket()!).breached) {
               <span class="badge" style="background:rgba(239,68,68,.12);color:#ef4444">
                 <span class="material-symbols-rounded" style="font-size:13px">warning</span>
@@ -99,6 +120,7 @@
               </span>
             }
           </div>
+
           <div style="margin-top:12px">
             <div style="display:flex;align-items:center;gap:10px">
               <div class="sla-bar-track">
@@ -107,46 +129,72 @@
                   [style.width]="slaInfo(ticket()!).percentage + '%'">
                 </div>
               </div>
-              <span style="font-size:11.5px;color:#445675;white-space:nowrap">{{ slaInfo(ticket()!).percentage }}% elapsed</span>
+              <span style="font-size:11.5px;color:#445675">
+                {{ slaInfo(ticket()!).percentage }}% elapsed
+              </span>
             </div>
           </div>
+
           @if (ticket()!.businessHoursElapsed != null) {
             <p style="margin-top:8px;font-size:12px;color:#445675">
-              {{ ticket()!.businessHoursElapsed }} business hours elapsed · Resolution time: {{ ticket()!.resolutionTime ?? 'Ongoing' }}
+              {{ ticket()!.businessHoursElapsed }} business hours elapsed ·
+              Resolution time: {{ ticket()!.resolutionTime ?? 'Ongoing' }}
             </p>
           }
         </div>
 
       </div>
 
-      <!-- Side -->
+      <!-- SIDE -->
       <div class="detail-side">
+
         <div class="detail-card">
-          <p class="detail-label"><span class="material-symbols-rounded">info</span>Ticket Details</p>
+          <p class="detail-label">
+            <span class="material-symbols-rounded">info</span>
+            Ticket Details
+          </p>
+
           <div class="info-rows">
+
             <div class="info-row">
               <span class="info-key">Ticket #</span>
               <span class="info-val mono">{{ ticket()!.ticketNumber }}</span>
             </div>
+
             <div class="info-row">
               <span class="info-key">Project</span>
               <span class="info-val">{{ ticket()!.projectName }}</span>
             </div>
+
             <div class="info-row">
               <span class="info-key">Priority</span>
-              <span class="info-val"><span class="badge {{ priorityClass(ticket()!.priority) }}">{{ ticket()!.priority }}</span></span>
+              <span class="info-val">
+                <span class="badge {{ priorityClass(ticket()!.priority) }}">
+                  {{ ticket()!.priority }}
+                </span>
+              </span>
             </div>
+
             <div class="info-row">
               <span class="info-key">Status</span>
-              <span class="info-val"><span class="badge {{ statusClass(ticket()!.currentStatus) }}">{{ ticket()!.currentStatus }}</span></span>
+              <span class="info-val">
+                <span class="badge {{ statusClass(ticket()!.currentStatus) }}">
+                  {{ ticket()!.currentStatus }}
+                </span>
+              </span>
             </div>
+
             <div class="info-row">
               <span class="info-key">Support Level</span>
               <span class="info-val">
-                @if (ticket()!.supportLevel) { <span class="level-tag">{{ ticket()!.supportLevel }}</span> }
-                @else { <span style="color:#445675">—</span> }
+                @if (ticket()!.supportLevel) {
+                  <span class="level-tag">{{ ticket()!.supportLevel }}</span>
+                } @else {
+                  <span style="color:#445675">—</span>
+                }
               </span>
             </div>
+
             <div class="info-row">
               <span class="info-key">Assigned To</span>
               <span class="info-val">
@@ -155,31 +203,35 @@
                     <div class="avatar">{{ initials(ticket()!.assignedEmployeeName) }}</div>
                     {{ ticket()!.assignedEmployeeName }}
                   </div>
-                } @else { <span style="color:#445675">Unassigned</span> }
+                } @else {
+                  <span style="color:#445675">Unassigned</span>
+                }
               </span>
             </div>
+
             <div class="info-row">
               <span class="info-key">Generated</span>
-              <span class="info-val" style="font-size:12px">{{ formatDateTime(ticket()!.generationDatetime) }}</span>
+              <span class="info-val">{{ formatDateTime(ticket()!.generationDatetime) }}</span>
             </div>
+
             <div class="info-row">
               <span class="info-key">Responded</span>
-              <span class="info-val" style="font-size:12px">{{ formatDateTime(ticket()!.responseDatetime) }}</span>
+              <span class="info-val">{{ formatDateTime(ticket()!.responseDatetime) }}</span>
             </div>
-            <div class="info-row">
-              <span class="info-key">Resolution</span>
-              <span class="info-val" style="font-size:12px">{{ ticket()!.resolutionTime ?? '—' }}</span>
-            </div>
+
             <div class="info-row">
               <span class="info-key">Created</span>
-              <span class="info-val" style="font-size:12px">{{ formatDateTime(ticket()!.createdAt) }}</span>
+              <span class="info-val">{{ formatDateTime(ticket()!.createdAt) }}</span>
             </div>
+
             <div class="info-row">
               <span class="info-key">Updated</span>
-              <span class="info-val" style="font-size:12px">{{ formatDateTime(ticket()!.updatedAt) }}</span>
+              <span class="info-val">{{ formatDateTime(ticket()!.updatedAt) }}</span>
             </div>
+
           </div>
         </div>
+
       </div>
     </div>
   }
