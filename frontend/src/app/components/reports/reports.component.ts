@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
@@ -12,13 +12,13 @@ import { DashboardDTO, Project } from '../../models/models';
   templateUrl: './reports.component.html',
   styleUrls: ['./reports.component.css']
 })
-export class ReportsComponent {
+export class ReportsComponent implements OnInit {
 
   private api = inject(ApiService);
   readonly store = inject(ProjectStore);
   private fb = inject(FormBuilder);
 
-  loading = signal<boolean>(true);
+  loading = signal(true);
   data = signal<DashboardDTO | null>(null);
   projects = signal<Project[]>([]);
 
@@ -26,39 +26,8 @@ export class ReportsComponent {
     projectId: [null as number | null]
   });
 
-  // SAFE STATUS ENTRIES
-  readonly statusEntries = computed(() => {
-    const d = this.data();
-    if (!d?.ticketsByStatus) return [];
-
-    return Object.entries(d.ticketsByStatus)
-      .map(([k, v]) => [k, Number(v)] as [string, number])
-      .sort((a, b) => b[1] - a[1]);
-  });
-
-  // SAFE PRIORITY ENTRIES
-  readonly priorityEntries = computed(() => {
-    const d = this.data();
-    if (!d?.ticketsByPriority) return [];
-
-    const order = ['P1 - Critical', 'P2 - High', 'P3 - Medium', 'P4 - Low'];
-
-    return Object.entries(d.ticketsByPriority)
-      .map(([k, v]) => [k, Number(v)] as [string, number])
-      .sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
-  });
-
   ngOnInit(): void {
-    this.api.getProjects('ACTIVE').subscribe({
-      next: (p) => this.projects.set(p),
-      error: () => this.projects.set([])
-    });
-
-    const pid = this.store.activeId();
-    if (pid) {
-      this.filterForm.patchValue({ projectId: pid });
-    }
-
+    this.api.getProjects('ACTIVE').subscribe(p => this.projects.set(p));
     this.load();
   }
 
@@ -68,7 +37,7 @@ export class ReportsComponent {
     const pid = this.filterForm.value.projectId ?? undefined;
 
     this.api.getDashboard(pid).subscribe({
-      next: (d) => {
+      next: d => {
         this.data.set(d);
         this.loading.set(false);
       },
@@ -83,26 +52,41 @@ export class ReportsComponent {
     this.load();
   }
 
+  statusEntries = computed(() => {
+    const d = this.data();
+    if (!d?.ticketsByStatus) return [];
+    return Object.entries(d.ticketsByStatus).map(([k, v]) => [k, Number(v)] as [string, number]);
+  });
+
+  priorityEntries = computed(() => {
+    const d = this.data();
+    if (!d?.ticketsByPriority) return [];
+
+    const order = ['P1 - Critical', 'P2 - High', 'P3 - Medium', 'P4 - Low'];
+
+    return Object.entries(d.ticketsByPriority)
+      .map(([k, v]) => [k, Number(v)] as [string, number])
+      .sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
+  });
+
   statusColor(s: string): string {
-    const m: Record<string, string> = {
-      'Open': '#3b82f6',
+    return {
+      Open: '#3b82f6',
       'In Progress': '#f59e0b',
-      'Pending': '#8b5cf6',
-      'Resolved': '#10b981',
-      'Closed': '#64748b',
-      'Escalated': '#ef4444'
-    };
-    return m[s] ?? '#64748b';
+      Pending: '#8b5cf6',
+      Resolved: '#10b981',
+      Closed: '#64748b',
+      Escalated: '#ef4444'
+    }[s] ?? '#64748b';
   }
 
   priorityColor(p: string): string {
-    const m: Record<string, string> = {
+    return {
       'P1 - Critical': '#ef4444',
       'P2 - High': '#f59e0b',
       'P3 - Medium': '#3b82f6',
       'P4 - Low': '#10b981'
-    };
-    return m[p] ?? '#64748b';
+    }[p] ?? '#64748b';
   }
 
   barWidth(val: number, max: number): number {
@@ -110,12 +94,10 @@ export class ReportsComponent {
   }
 
   maxStatus(): number {
-    const vals = this.statusEntries().map(([, v]) => v);
-    return Math.max(...vals, 1);
+    return Math.max(...this.statusEntries().map(([, v]) => v), 1);
   }
 
   maxPriority(): number {
-    const vals = this.priorityEntries().map(([, v]) => v);
-    return Math.max(...vals, 1);
+    return Math.max(...this.priorityEntries().map(([, v]) => v), 1);
   }
 }

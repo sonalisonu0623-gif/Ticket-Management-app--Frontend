@@ -3,7 +3,15 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
-import { Project, Employee, Shift, SlaConfig, PRIORITIES, SUPPORT_LEVELS, ROLES } from '../../models/models';
+import {
+  Project,
+  Employee,
+  Shift,
+  SlaConfig,
+  PRIORITIES,
+  SUPPORT_LEVELS,
+  ROLES
+} from '../../models/models';
 
 type Tab = 'projects' | 'employees' | 'authorization' | 'shifts' | 'sla';
 
@@ -25,6 +33,7 @@ export class ConfigurationComponent implements OnInit {
   private toast = inject(ToastService);
   private fb    = inject(FormBuilder);
 
+  // ---------------- STATE ----------------
   activeTab  = signal<Tab>('projects');
   loading    = signal(true);
   saving     = signal(false);
@@ -40,9 +49,9 @@ export class ConfigurationComponent implements OnInit {
   slaConfigs = signal<SlaConfig[]>([]);
 
   selectedProjForAuth = signal<Project | null>(null);
-
   authMap = signal<Record<number, AuthAssignment[]>>({});
 
+  // ---------------- CONSTANTS ----------------
   readonly priorities    = PRIORITIES;
   readonly supportLevels = SUPPORT_LEVELS;
   readonly roles         = ROLES;
@@ -52,13 +61,14 @@ export class ConfigurationComponent implements OnInit {
   ];
 
   readonly tabs = [
-    { id: 'projects',      label: 'Project Management',    icon: 'folder_special' },
-    { id: 'employees',     label: 'Employee Management',   icon: 'group' },
+    { id: 'projects', label: 'Project Management', icon: 'folder_special' },
+    { id: 'employees', label: 'Employee Management', icon: 'group' },
     { id: 'authorization', label: 'Project Authorization', icon: 'admin_panel_settings' },
-    { id: 'shifts',        label: 'Shift Management',      icon: 'schedule' },
-    { id: 'sla',           label: 'SLA Configuration',     icon: 'timer' }
+    { id: 'shifts', label: 'Shift Management', icon: 'schedule' },
+    { id: 'sla', label: 'SLA Configuration', icon: 'timer' }
   ] as const;
 
+  // ---------------- FORMS ----------------
   projectForm = this.fb.group({
     projectName: ['', [Validators.required, Validators.minLength(2)]],
     projectCode: ['', Validators.required],
@@ -99,6 +109,7 @@ export class ConfigurationComponent implements OnInit {
     roleInProject: ['L1_SUPPORT', Validators.required]
   });
 
+  // ---------------- FILTERS ----------------
   filteredProjects = computed(() => {
     const q = this.searchTerm().toLowerCase();
     return this.projects().filter(p =>
@@ -115,6 +126,7 @@ export class ConfigurationComponent implements OnInit {
     );
   });
 
+  // ---------------- INIT ----------------
   ngOnInit(): void {
     this.loadAll();
   }
@@ -130,14 +142,71 @@ export class ConfigurationComponent implements OnInit {
     this.api.getEmployees().subscribe(e => this.employees.set(e));
     this.api.getShifts().subscribe(s => this.shifts.set(s));
     this.api.getSlaConfigs().subscribe(c => this.slaConfigs.set(c));
+
+    this.loadAssignments();
   }
 
+  // ---------------- AUTH HELPERS ----------------
+  loadAssignments(): void {
+    // SAFE default (prevents undefined crash)
+    this.authMap.set({});
+  }
+
+  getAuthAssignments(projId: number): AuthAssignment[] {
+    return this.authMap()[projId] ?? [];
+  }
+
+  selectProjForAuth(p: Project): void {
+    this.selectedProjForAuth.set(p);
+    this.authAssignForm.reset({ roleInProject: 'L1_SUPPORT' });
+  }
+
+  assignEmpToProj(): void {
+  const form = this.authAssignForm;
+
+  const empId = form.value.employeeId;
+  const projId = this.selectedProjForAuth()?.id;
+
+  if (!empId || !projId) {
+    this.toast.error('Select employee and project');
+    return;
+  }
+
+  this.api.assignEmployeeToProject(empId, projId).subscribe({
+    next: () => {
+      this.toast.success('Employee assigned');
+      this.loadAll();
+      form.reset({ roleInProject: 'L1_SUPPORT' });
+    },
+    error: () => this.toast.error('Assignment failed')
+  });
+}
+
+  removeEmpFromProj(empId: number): void {
+    const projectId = this.selectedProjForAuth()?.id;
+    if (!projectId) return;
+
+    this.api.removeEmployeeFromProject(projectId, empId).subscribe({
+      next: () => {
+        this.toast.success('Removed');
+        this.loadAll();
+      },
+      error: () => this.toast.error('Remove failed')
+    });
+  }
+
+  projectName(id?: number): string {
+    return this.projects().find(p => p.id === id)?.projectName ?? '—';
+  }
+
+  // ---------------- TAB ----------------
   switchTab(tab: Tab): void {
     this.activeTab.set(tab);
     this.searchTerm.set('');
     this.closeModal();
   }
 
+  // ---------------- MODAL ----------------
   openCreate(): void {
     this.editingId.set(null);
     this.resetCurrentForm();
@@ -149,17 +218,10 @@ export class ConfigurationComponent implements OnInit {
 
     const tab = this.activeTab();
 
-    if (tab === 'projects')
-      this.projectForm.patchValue({ ...item, slaHours: item.slaHours ?? 24 });
-
-    if (tab === 'employees')
-      this.employeeForm.patchValue({ ...item, projectIds: item.projectIds ?? [] });
-
-    if (tab === 'shifts')
-      this.shiftForm.patchValue({ ...item, workingDays: item.workingDays ?? [] });
-
-    if (tab === 'sla')
-      this.slaForm.patchValue({ ...item, projectId: item.projectId ?? null });
+    if (tab === 'projects') this.projectForm.patchValue(item);
+    if (tab === 'employees') this.employeeForm.patchValue(item);
+    if (tab === 'shifts') this.shiftForm.patchValue(item);
+    if (tab === 'sla') this.slaForm.patchValue(item);
 
     this.modalOpen.set(true);
   }
@@ -201,6 +263,7 @@ export class ConfigurationComponent implements OnInit {
       });
   }
 
+  // ---------------- SAVE ----------------
   save(): void {
     const tab = this.activeTab();
 
@@ -238,18 +301,19 @@ export class ConfigurationComponent implements OnInit {
 
     req$?.subscribe({
       next: () => {
-        this.toast.success(id ? 'Updated successfully' : 'Created successfully');
+        this.toast.success(id ? 'Updated' : 'Created');
         this.closeModal();
         this.loadAll();
         this.saving.set(false);
       },
-      error: (err: any) => {
-        this.toast.error('Failed to save', err?.error?.message);
+      error: () => {
+        this.toast.error('Save failed');
         this.saving.set(false);
       }
     });
   }
 
+  // ---------------- DELETE ----------------
   confirmDelete(id: number, type: string): void {
     this.deleteId.set(id);
     this.deleteType.set(type);
@@ -274,10 +338,11 @@ export class ConfigurationComponent implements OnInit {
         this.deleteId.set(null);
         this.loadAll();
       },
-      error: () => this.toast.error('Failed to delete')
+      error: () => this.toast.error('Delete failed')
     });
   }
 
+  // ---------------- SHIFTS ----------------
   toggleDay(day: string): void {
     const cur = this.shiftForm.value.workingDays ?? [];
 
@@ -290,18 +355,5 @@ export class ConfigurationComponent implements OnInit {
 
   isDaySelected(day: string): boolean {
     return (this.shiftForm.value.workingDays ?? []).includes(day);
-  }
-
-  selectProjForAuth(p: Project): void {
-    this.selectedProjForAuth.set(p);
-    this.authAssignForm.reset({ roleInProject: 'L1_SUPPORT' });
-  }
-
-  getAuthAssignments(projId: number): AuthAssignment[] {
-    return this.authMap()[projId] ?? [];
-  }
-
-  projectName(id?: number): string {
-    return this.projects().find(p => p.id === id)?.projectName ?? '—';
   }
 }
