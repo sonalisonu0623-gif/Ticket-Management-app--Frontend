@@ -1,6 +1,7 @@
 import { Component, signal, inject, OnInit, HostListener } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+
 import { AuthService } from './services/auth.service';
 import { ThemeService } from './services/theme.service';
 import { ApiService } from './services/api.service';
@@ -18,6 +19,7 @@ import { Project } from './models/models';
 })
 export class AppComponent implements OnInit {
 
+  // ---------------- SERVICES ----------------
   readonly authService  = inject(AuthService);
   readonly themeService = inject(ThemeService);
   readonly apiService   = inject(ApiService);
@@ -26,6 +28,7 @@ export class AppComponent implements OnInit {
   readonly toastSvc     = inject(ToastService);
   readonly router       = inject(Router);
 
+  // ---------------- UI STATE ----------------
   sidebarCollapsed = signal(false);
   projDropOpen     = signal(false);
 
@@ -35,38 +38,35 @@ export class AppComponent implements OnInit {
   // ---------------- INIT ----------------
   ngOnInit(): void {
     if (this.authService.isAuthenticated()) {
-      this.loadProjects();
+      this.loadProjectsAndSetActive();
     }
   }
 
-  // ---------------- LOAD PROJECTS ----------------
-  loadProjects(): void {
-    this.store.setLoading(true);
-
+  // ---------------- FIXED PROJECT LOAD ----------------
+  loadProjectsAndSetActive(): void {
     this.apiService.getProjects('ACTIVE').subscribe({
       next: (projects: Project[]) => {
 
-        // 1️⃣ store all projects
+        // 1. Store all projects
         this.store.setProjects(projects);
 
-        // 2️⃣ FIX: set default active project safely
-        const currentActive = this.store.activeProject();
+        if (!projects.length) return;
 
-        if (projects.length > 0) {
+        // 2. Get current active id (source of truth)
+        const activeId = this.store.activeId();
 
-          // if nothing selected OR invalid selection
-          if (!currentActive || !projects.find(p => p.id === currentActive.id)) {
-            this.store.switchProject(projects[0].id!);
-          }
+        // 3. Validate active project exists in new list
+        let activeProject = projects.find(p => p.id === activeId);
+
+        // 4. If invalid OR not set → fallback to first project
+        if (!activeProject) {
+          activeProject = projects[0];
         }
 
-        this.store.setLoading(false);
+        // 5. IMPORTANT: call ONLY ONCE
+        this.store.switchProject(activeProject.id!);
       },
-
-      error: (err) => {
-        console.error('Project load failed', err);
-        this.store.setLoading(false);
-      }
+      error: (err) => console.error('Project load failed', err)
     });
   }
 
@@ -75,18 +75,15 @@ export class AppComponent implements OnInit {
     if (!p?.id) return;
 
     this.store.switchProject(p.id);
-
-    // close dropdown
     this.projDropOpen.set(false);
 
-    // refresh current route (forces UI refresh across modules)
     const url = this.router.url;
 
     this.router.navigateByUrl('/', { skipLocationChange: true })
       .then(() => this.router.navigate([url]));
   }
 
-  // ---------------- UI TOGGLES ----------------
+  // ---------------- UI ----------------
   toggleSidebar(): void {
     this.sidebarCollapsed.update(v => !v);
   }
@@ -95,27 +92,24 @@ export class AppComponent implements OnInit {
     this.projDropOpen.update(v => !v);
   }
 
-  // ---------------- AUTH ----------------
   executeSignout(): void {
     this.authService.logout();
   }
 
   // ---------------- TOAST ICON ----------------
   toastIcon(type: string): string {
-    switch (type) {
-      case 'success': return 'check_circle';
-      case 'error': return 'cancel';
-      case 'warning': return 'warning';
-      default: return 'info';
-    }
+    if (type === 'success') return 'check_circle';
+    if (type === 'error') return 'cancel';
+    if (type === 'warning') return 'warning';
+    return 'info';
   }
 
-  // ---------------- CLOSE DROPDOWN ON OUTSIDE CLICK ----------------
+  // ---------------- CLOSE DROPDOWN ----------------
   @HostListener('document:click', ['$event'])
   onDocClick(e: Event): void {
-    const target = e.target as HTMLElement;
+    const el = e.target as HTMLElement;
 
-    if (!target.closest('.proj-switcher-area')) {
+    if (!el.closest('.proj-switcher-area')) {
       this.projDropOpen.set(false);
     }
   }
