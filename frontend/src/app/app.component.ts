@@ -19,7 +19,6 @@ import { Project } from './models/models';
 })
 export class AppComponent implements OnInit {
 
-  // ---------------- SERVICES ----------------
   readonly authService  = inject(AuthService);
   readonly themeService = inject(ThemeService);
   readonly apiService   = inject(ApiService);
@@ -28,49 +27,39 @@ export class AppComponent implements OnInit {
   readonly toastSvc     = inject(ToastService);
   readonly router       = inject(Router);
 
-  // ---------------- UI STATE ----------------
   sidebarCollapsed = signal(false);
   projDropOpen     = signal(false);
 
   readonly isLoading = this.loadingSvc.isLoading;
   readonly toasts    = this.toastSvc.toasts;
 
-  // ---------------- INIT ----------------
   ngOnInit(): void {
     if (this.authService.isAuthenticated()) {
-      this.loadProjectsAndSetActive();
+      this.loadProjects();
     }
   }
 
-  // ---------------- FIXED PROJECT LOAD ----------------
-  loadProjectsAndSetActive(): void {
+  loadProjects(): void {
     this.apiService.getProjects('ACTIVE').subscribe({
       next: (projects: Project[]) => {
 
-        // 1. Store all projects
         this.store.setProjects(projects);
 
         if (!projects.length) return;
 
-        // 2. Get current active id (source of truth)
+        // 🔥 ALWAYS initialize active project properly
         const activeId = this.store.activeId();
 
-        // 3. Validate active project exists in new list
-        let activeProject = projects.find(p => p.id === activeId);
+        const valid = projects.find(p => p.id === activeId);
 
-        // 4. If invalid OR not set → fallback to first project
-        if (!activeProject) {
-          activeProject = projects[0];
-        }
+        const finalProject = valid ?? projects[0];
 
-        // 5. IMPORTANT: call ONLY ONCE
-        this.store.switchProject(activeProject.id!);
+        this.store.switchProject(finalProject.id!);
       },
       error: (err) => console.error('Project load failed', err)
     });
   }
 
-  // ---------------- SWITCH PROJECT ----------------
   switchProject(p: Project): void {
     if (!p?.id) return;
 
@@ -83,7 +72,6 @@ export class AppComponent implements OnInit {
       .then(() => this.router.navigate([url]));
   }
 
-  // ---------------- UI ----------------
   toggleSidebar(): void {
     this.sidebarCollapsed.update(v => !v);
   }
@@ -96,19 +84,19 @@ export class AppComponent implements OnInit {
     this.authService.logout();
   }
 
-  // ---------------- TOAST ICON ----------------
   toastIcon(type: string): string {
-    if (type === 'success') return 'check_circle';
-    if (type === 'error') return 'cancel';
-    if (type === 'warning') return 'warning';
-    return 'info';
+    return type === 'success'
+      ? 'check_circle'
+      : type === 'error'
+        ? 'cancel'
+        : type === 'warning'
+          ? 'warning'
+          : 'info';
   }
 
-  // ---------------- CLOSE DROPDOWN ----------------
   @HostListener('document:click', ['$event'])
   onDocClick(e: Event): void {
     const el = e.target as HTMLElement;
-
     if (!el.closest('.proj-switcher-area')) {
       this.projDropOpen.set(false);
     }
